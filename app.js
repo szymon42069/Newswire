@@ -1,0 +1,393 @@
+/* =============================================================
+   THE BRIEFING — app.js
+   Handles: data fetching, rendering, category switching,
+            search, live clock, staggered card reveals.
+   ============================================================= */
+
+(function () {
+  "use strict";
+
+  // ----------------------------------------------------------------
+  // State
+  // ----------------------------------------------------------------
+  const state = {
+    currentCategory: "top",
+    articles: [],
+    isLoading: false,
+    searchQuery: "",
+    lastFetched: null,
+  };
+
+  // Cache fetched categories so switching back feels instant
+  const articleCache = {};
+
+  // ----------------------------------------------------------------
+  // DOM refs
+  // ----------------------------------------------------------------
+  const els = {
+    contentArea: document.getElementById("content-area"),
+    navButtons:  document.querySelectorAll(".nav-item button"),
+    searchToggle: document.getElementById("btn-search"),
+    searchOverlay: document.getElementById("search-overlay"),
+    searchInput:  document.getElementById("search-input"),
+    refreshBtn:   document.getElementById("btn-refresh"),
+    liveDate:     document.getElementById("live-date"),
+    searchClose:  document.getElementById("btn-search-close"),
+  };
+
+  // ----------------------------------------------------------------
+  // Utilities
+  // ----------------------------------------------------------------
+
+  function timeAgo(timestamp) {
+    const now = Date.now() / 1000;
+    const diff = now - timestamp;
+
+    if (diff < 60)          return "just now";
+    if (diff < 3600)        return `${Math.floor(diff / 60)}m ago`;
+    if (diff < 86400)       return `${Math.floor(diff / 3600)}h ago`;
+    if (diff < 86400 * 7)   return `${Math.floor(diff / 86400)}d ago`;
+
+    const d = new Date(timestamp * 1000);
+    return d.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+  }
+
+  function formatCategoryLabel(cat) {
+    const map = {
+      top: "Top Stories",
+      world: "World",
+      business: "Business",
+      technology: "Technology",
+      science: "Science",
+      sport: "Sport",
+      uk: "United Kingdom",
+    };
+    return map[cat] || cat;
+  }
+
+  function escapeHtml(str) {
+    const div = document.createElement("div");
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  function placeholderSvg() {
+    return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+      <rect x="3" y="3" width="18" height="18" rx="2"/>
+      <path d="M3 9l4-4 4 4 4-6 4 6"/>
+      <circle cx="8.5" cy="13.5" r="1.5"/>
+    </svg>`;
+  }
+
+  // ----------------------------------------------------------------
+  // Rendering helpers
+  // ----------------------------------------------------------------
+
+  function renderHero(article) {
+    const imageHtml = article.image
+      ? `<img src="${escapeHtml(article.image)}" alt="" loading="eager" onerror="this.parentElement.innerHTML='${escapeHtml('<div class="hero-image-placeholder">' + placeholderSvg() + '</div>')}'"/>`
+      : `<div class="hero-image-placeholder">${placeholderSvg()}</div>`;
+
+    return `
+      <article class="hero">
+        <div class="hero-image">${imageHtml}</div>
+        <div class="hero-body">
+          <div>
+            <p class="hero-category-label">— ${escapeHtml(formatCategoryLabel(state.currentCategory))}</p>
+            <h2 class="hero-title">
+              <a href="${escapeHtml(article.link)}" target="_blank" rel="noopener">
+                ${escapeHtml(article.title)}
+              </a>
+            </h2>
+            ${article.summary ? `<p class="hero-summary">${escapeHtml(article.summary)}</p>` : ""}
+          </div>
+          <div class="hero-meta">
+            <div style="display:flex;align-items:center;gap:10px;">
+              ${article.source ? `<span class="source-tag">${escapeHtml(article.source)}</span>` : ""}
+              <span class="time-tag">${timeAgo(article.timestamp)}</span>
+            </div>
+            <a href="${escapeHtml(article.link)}" target="_blank" rel="noopener" class="read-link">
+              Read
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </a>
+          </div>
+        </div>
+      </article>`;
+  }
+
+  function renderCard(article, index) {
+    const imageHtml = article.image
+      ? `<img src="${escapeHtml(article.image)}" alt="" loading="lazy" onerror="this.parentElement.innerHTML='<div class=\\"card-image-placeholder\\">${placeholderSvg()}</div>'"/>`
+      : `<div class="card-image-placeholder">${placeholderSvg()}</div>`;
+
+    return `
+      <article class="card" style="animation-delay:${index * 55}ms">
+        <div class="card-image">${imageHtml}</div>
+        <div class="card-body">
+          ${article.source ? `<p class="card-source">${escapeHtml(article.source)}</p>` : ""}
+          <h3 class="card-title">
+            <a href="${escapeHtml(article.link)}" target="_blank" rel="noopener">
+              ${escapeHtml(article.title)}
+            </a>
+          </h3>
+          ${article.summary ? `<p class="card-summary">${escapeHtml(article.summary)}</p>` : ""}
+          <div class="card-footer">
+            <span class="card-time">${timeAgo(article.timestamp)}</span>
+            <a href="${escapeHtml(article.link)}" target="_blank" rel="noopener" class="card-arrow" aria-label="Read article">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </a>
+          </div>
+        </div>
+      </article>`;
+  }
+
+  function renderContent(articles) {
+    if (!articles || articles.length === 0) {
+      return `<div class="error-state"><h3>Nothing found.</h3><p>Try refreshing or switching categories.</p></div>`;
+    }
+
+    // Filter by search query if active
+    let filtered = articles;
+    if (state.searchQuery) {
+      const q = state.searchQuery.toLowerCase();
+      filtered = articles.filter(
+        (a) =>
+          a.title.toLowerCase().includes(q) ||
+          (a.summary && a.summary.toLowerCase().includes(q)) ||
+          (a.source && a.source.toLowerCase().includes(q))
+      );
+    }
+
+    if (filtered.length === 0) {
+      return `<div class="article-grid"><p class="no-results">No articles matching "${escapeHtml(state.searchQuery)}"</p></div>`;
+    }
+
+    const [hero, ...rest] = filtered;
+    const gridItems = rest.map((a, i) => renderCard(a, i)).join("");
+
+    return `
+      <div class="content-panel entering">
+        ${renderHero(hero)}
+        <div class="section-header">
+          <span class="section-title">Latest stories</span>
+          <span class="section-count">${filtered.length} articles</span>
+        </div>
+        <div class="article-grid">
+          ${gridItems || '<p class="no-results">Only one article today.</p>'}
+        </div>
+      </div>`;
+  }
+
+  function renderLoading() {
+    return `<div class="loading-state">
+      <div class="loading-spinner"></div>
+      <p class="loading-text">Fetching latest stories…</p>
+    </div>`;
+  }
+
+  function renderError(msg) {
+    return `<div class="error-state">
+      <h3>Couldn't load stories.</h3>
+      <p>${escapeHtml(msg || "Unknown error — check your connection.")}</p>
+    </div>`;
+  }
+
+  // ----------------------------------------------------------------
+  // Staggered card reveal (requestAnimationFrame trick)
+  // ----------------------------------------------------------------
+  function revealCards() {
+    const cards = els.contentArea.querySelectorAll(".card");
+    cards.forEach((card, i) => {
+      setTimeout(() => card.classList.add("revealed"), i * 55);
+    });
+  }
+
+  // ----------------------------------------------------------------
+  // Data fetching
+  // ----------------------------------------------------------------
+  async function fetchArticles(category) {
+    // Check local cache first
+    if (articleCache[category]) {
+      const { articles, fetchedAt } = articleCache[category];
+      const age = Date.now() - fetchedAt;
+      if (age < 5 * 60 * 1000) {
+        // still fresh (< 5 mins)
+        return articles;
+      }
+    }
+
+    const response = await fetch(`/api/news?category=${category}`);
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      throw new Error(data.error || `HTTP ${response.status}`);
+    }
+
+    const data = await response.json();
+    articleCache[category] = { articles: data.articles, fetchedAt: Date.now() };
+    return data.articles;
+  }
+
+  // ----------------------------------------------------------------
+  // Main load / transition flow
+  // ----------------------------------------------------------------
+  async function loadCategory(category, force = false) {
+    if (state.isLoading) return;
+    state.isLoading = true;
+    state.currentCategory = category;
+
+    // Animate the old content out
+    const existing = els.contentArea.querySelector(".content-panel");
+    if (existing) {
+      existing.classList.remove("entering");
+      existing.classList.add("leaving");
+      await new Promise((r) => setTimeout(r, 200));
+    }
+
+    els.contentArea.innerHTML = renderLoading();
+
+    if (force && articleCache[category]) {
+      delete articleCache[category];
+    }
+
+    try {
+      const articles = await fetchArticles(category);
+      state.articles = articles;
+      state.lastFetched = Date.now();
+      els.contentArea.innerHTML = renderContent(articles);
+      revealCards();
+    } catch (err) {
+      console.error("Fetch error:", err);
+      els.contentArea.innerHTML = renderError(err.message);
+    } finally {
+      state.isLoading = false;
+      updateNavActive(category);
+    }
+  }
+
+  // ----------------------------------------------------------------
+  // Nav: active state
+  // ----------------------------------------------------------------
+  function updateNavActive(category) {
+    els.navButtons.forEach((btn) => {
+      btn.classList.toggle("active", btn.dataset.category === category);
+    });
+  }
+
+  // ----------------------------------------------------------------
+  // Live clock
+  // ----------------------------------------------------------------
+  function updateClock() {
+    const now = new Date();
+    const opts = {
+      weekday: "short",
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    };
+    if (els.liveDate) {
+      els.liveDate.textContent = now.toLocaleString("en-GB", opts);
+    }
+  }
+
+  // ----------------------------------------------------------------
+  // Search logic
+  // ----------------------------------------------------------------
+  function openSearch() {
+    els.searchOverlay.classList.add("open");
+    setTimeout(() => els.searchInput.focus(), 50);
+  }
+
+  function closeSearch() {
+    els.searchOverlay.classList.remove("open");
+    if (!state.searchQuery) return;
+    state.searchQuery = "";
+    els.searchInput.value = "";
+    els.contentArea.innerHTML = renderContent(state.articles);
+    revealCards();
+  }
+
+  // ----------------------------------------------------------------
+  // Event listeners
+  // ----------------------------------------------------------------
+  function bindEvents() {
+    // Category nav
+    els.navButtons.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const cat = btn.dataset.category;
+        if (cat === state.currentCategory && !state.isLoading) return;
+        loadCategory(cat);
+      });
+    });
+
+    // Search open/close
+    els.searchToggle.addEventListener("click", openSearch);
+    els.searchClose && els.searchClose.addEventListener("click", closeSearch);
+
+    els.searchOverlay.addEventListener("click", (e) => {
+      if (e.target === els.searchOverlay) closeSearch();
+    });
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") closeSearch();
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        openSearch();
+      }
+    });
+
+    // Search input: filter in real time
+    els.searchInput.addEventListener("input", (e) => {
+      state.searchQuery = e.target.value.trim();
+      els.contentArea.innerHTML = renderContent(state.articles);
+      revealCards();
+    });
+
+    // Refresh button
+    els.refreshBtn.addEventListener("click", () => {
+      if (state.isLoading) return;
+      els.refreshBtn.classList.add("spinning");
+      loadCategory(state.currentCategory, true).then(() => {
+        els.refreshBtn.classList.remove("spinning");
+      });
+    });
+  }
+
+  // ----------------------------------------------------------------
+  // Auto-refresh every 5 minutes
+  // ----------------------------------------------------------------
+  function startAutoRefresh() {
+    setInterval(() => {
+      // Only auto-refresh if the tab is visible
+      if (!document.hidden) {
+        // Invalidate cache for current category silently
+        if (articleCache[state.currentCategory]) {
+          delete articleCache[state.currentCategory];
+        }
+        loadCategory(state.currentCategory);
+      }
+    }, 5 * 60 * 1000);
+  }
+
+  // ----------------------------------------------------------------
+  // Boot
+  // ----------------------------------------------------------------
+  function init() {
+    updateClock();
+    setInterval(updateClock, 30000);
+
+    bindEvents();
+    startAutoRefresh();
+
+    // Load initial content
+    loadCategory("top");
+  }
+
+  // Wait for DOM to be ready
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init);
+  } else {
+    init();
+  }
+})();

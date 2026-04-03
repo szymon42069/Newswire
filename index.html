@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="A personal news dashboard pulling live headlines from across the web." />
+  <meta name="theme-color" content="#0b0b0e" />
+
+  <title>The Briefing</title>
+
+  <!-- Favicon — inline SVG data URI -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='4' fill='%230b0b0e'/><text x='16' y='23' font-size='18' text-anchor='middle' fill='%23c17f24' font-family='Georgia,serif' font-weight='bold'>B</text></svg>" />
+
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+
+  <!-- =====================================================
+       HEADER
+       ===================================================== -->
+  <header class="site-header">
+    <div class="header-top">
+
+      <!-- Logo -->
+      <div class="logo" aria-label="The Briefing">
+        <span class="logo-name">The <span>Briefing</span></span>
+        <span class="logo-tagline">Live news dashboard</span>
+      </div>
+
+      <!-- Right controls -->
+      <div class="header-right">
+        <span class="live-date" id="live-date" aria-live="polite">
+          <span class="live-dot" aria-hidden="true"></span>
+          loading…
+        </span>
+
+        <!-- Refresh -->
+        <button class="btn-refresh" id="btn-refresh" aria-label="Refresh articles">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <polyline points="1 4 1 10 7 10"/>
+            <path d="M3.51 15a9 9 0 1 0 .49-4.87"/>
+          </svg>
+          Refresh
+        </button>
+
+        <!-- Search toggle -->
+        <button class="btn-icon" id="btn-search" aria-label="Search articles (Ctrl+K)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+            <circle cx="11" cy="11" r="7"/>
+            <path d="M21 21l-4.35-4.35"/>
+          </svg>
+        </button>
+      </div>
+
+    </div>
+
+    <!-- Category navigation -->
+    <nav class="category-nav" aria-label="News categories">
+      <ul class="nav-list" role="list">
+        <li class="nav-item" role="listitem">
+          <button data-category="top" class="active" aria-current="true">Top</button>
+        </li>
+        <li class="nav-item" role="listitem">
+          <button data-category="uk">UK</button>
+        </li>
+        <li class="nav-item" role="listitem">
+          <button data-category="world">World</button>
+        </li>
+        <li class="nav-item" role="listitem">
+          <button data-category="business">Business</button>
+        </li>
+        <li class="nav-item" role="listitem">
+          <button data-category="technology">Technology</button>
+        </li>
+        <li class="nav-item" role="listitem">
+          <button data-category="science">Science</button>
+        </li>
+        <li class="nav-item" role="listitem">
+          <button data-category="sport">Sport</button>
+        </li>
+      </ul>
+    </nav>
+  </header>
+
+  <!-- =====================================================
+       SEARCH OVERLAY
+       ===================================================== -->
+  <div class="search-overlay" id="search-overlay" role="dialog" aria-modal="true" aria-label="Search articles">
+    <div class="search-box">
+      <input
+        type="search"
+        class="search-input"
+        id="search-input"
+        placeholder="Search articles…"
+        autocomplete="off"
+        spellcheck="false"
+        aria-label="Search query"
+      />
+      <p class="search-hint">Press <kbd>Esc</kbd> to close &nbsp;·&nbsp; <kbd>Ctrl K</kbd> to reopen</p>
+    </div>
+    <button class="btn-icon" id="btn-search-close" aria-label="Close search" style="margin-top:24px; color: var(--text-muted);">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <path d="M18 6L6 18M6 6l12 12"/>
+      </svg>
+    </button>
+  </div>
+
+  <!-- =====================================================
+       MAIN CONTENT
+       ===================================================== -->
+  <main class="main" id="content-area" aria-live="polite" aria-atomic="false">
+    <!-- Populated by app.js -->
+    <div class="loading-state">
+      <div class="loading-spinner"></div>
+      <p class="loading-text">Fetching latest stories…</p>
+    </div>
+  </main>
+
+  <!-- =====================================================
+       FOOTER
+       ===================================================== -->
+  <footer class="site-footer">
+    <span class="footer-left">The Briefing &nbsp;·&nbsp; Powered by Google News RSS</span>
+    <span class="footer-right">
+      Built with Python + Flask &nbsp;·&nbsp;
+      <a href="https://github.com" target="_blank" rel="noopener">View on GitHub</a>
+    </span>
+  </footer>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
