@@ -1,7 +1,7 @@
 
 ![header](https://capsule-render.vercel.app/api?type=waving&height=300&color=gradient&text=The%20%Newswire&reversal=false&animation=twinkling&textBg=false&section=header)
 
-# Newswire
+# 📰 Newswire 🗞
 
 A live news dashboard I put together over a few evenings and weeks throughout my breaks. It pulls headlines from Google News RSS feeds across several categories, serves them through a small Flask API, and displays everything in a dark editorial UI with smooth transitions between sections.
 
@@ -9,7 +9,7 @@ I built this mostly to have a cleaner alternative to opening a dozen news tabs i
 
 ---
 
-## What it does
+## ✨ What it does⁉ ✨
 
 - Web scrapes headlines from Google News across seven categories: Top, Country of coice, World, Business, Technology, Science, and Sport (You get to pick which categories you would like, but can change them at any time)
 - Caches each feed for 5 minutes so it's not crashing the RSS endpoints on every page load
@@ -19,7 +19,7 @@ I built this mostly to have a cleaner alternative to opening a dozen news tabs i
 - Real-time search that filters the current feed client-side
 - Auto-refreshes every 5 minutes if the tab is open
 
-## Stack
+## 🛠 Stack
 
 - **Backend:** Python + Flask
 - **Parsing:** feedparser (handles RSS edge cases cleanly)
@@ -38,7 +38,7 @@ python app.py
 
 Then open `http://localhost:5000`.
 
-## Running it from a phone (Android / Termux)
+## 📱 Running it from a phone (Android / Termux) 
 
 This is the fun part. I usually run it of my phone as a local server on my home Wi-Fi. I will try to add the ability to not have to port-forward your router to allow it to run on any network.
 
@@ -60,7 +60,7 @@ python app.py
 
 It works surprisingly alright. My phone sits on charge on my desk and the server just runs in the background within Termux.
 
-## Project structure
+## 📁 Project structure
 
 ```
 Newswire/
@@ -110,7 +110,7 @@ Example response:
 
 **Phone battery:** Termux keeps the server alive pretty reliably if you disable battery optimisation for the app (Android → Settings → Battery → Termux → Unrestricted). I'm gonna try to as well try to improve the battery optimisation.
 
-## Potential improvements
+## 📊 Project's Roadmap/Potential Improvements
 
 - Add support for the Financial Times RSS feeds, they have topic-specific ones for subscribers, so you will have to provide your login details or token. Don't you worry though because this will be stored locally.❌
 - Persist a read/unread state in localStorage❌
