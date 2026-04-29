@@ -1,3 +1,5 @@
+https://capsule-render.vercel.app/api?type=waving&height=300&color=gradient&text=The%20%Newswire&reversal=false&animation=twinkling&textBg=false&section=header
+
 # Newswire
 
 A live news dashboard I put together over a few evenings and weeks throughout my breaks. It pulls headlines from Google News RSS feeds across several categories, serves them through a small Flask API, and displays everything in a dark editorial UI with smooth transitions between sections.
@@ -129,4 +131,3 @@ Example response:
 
 MIT — do whatever you like with it.
 
-https://capsule-render.vercel.app/api?
