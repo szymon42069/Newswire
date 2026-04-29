@@ -14,7 +14,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-# Multiple feeds per category — merged and deduplicated by title
+
 RSS_FEEDS = {
     "top": [
         "https://feeds.bbci.co.uk/news/rss.xml",
@@ -60,9 +60,6 @@ def _strip_html(raw: str) -> str:
     return html.unescape(text)
 
 
-# ---------------------------------------------------------------------------
-# HTTP session with browser-like headers
-# ---------------------------------------------------------------------------
 _SESSION = requests.Session()
 _SESSION.headers.update({
     "User-Agent": (
@@ -88,7 +85,6 @@ def _scrape_media(url: str) -> dict:
             resp.close()
             return result
 
-        # og:image is always in <head> — read only the first 50 KB
         chunks, size = [], 0
         for chunk in resp.iter_content(chunk_size=8192):
             chunks.append(chunk)
@@ -163,9 +159,6 @@ def _resolve_article(article: dict) -> dict:
     return article
 
 
-# ---------------------------------------------------------------------------
-# Feed parsing
-# ---------------------------------------------------------------------------
 
 def _parse_entry(entry) -> dict:
     raw_title = entry.get("title", "Untitled")
@@ -264,9 +257,7 @@ def fetch_feed(category: str) -> list:
     return articles
 
 
-# ---------------------------------------------------------------------------
-# Routes
-# ---------------------------------------------------------------------------
+
 
 @app.route("/")
 def index():
