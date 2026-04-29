@@ -1,5 +1,5 @@
 /* =============================================================
-   THE BRIEFING — app.js
+   Newswire — app.js
    Handles: data fetching, rendering, category switching,
             search, live clock, staggered card reveals.
    ============================================================= */
@@ -7,9 +7,21 @@
 (function () {
   "use strict";
 
-  // ----------------------------------------------------------------
-  // State
-  // ----------------------------------------------------------------
+  /* ----------------------------------------------------------
+     Global image-error handler — called via onerror="imgError(this)"
+     Replaces the broken <img> (or its parent wrapper) with a
+     placeholder div so we never get a broken-image icon.
+  ---------------------------------------------------------- */
+  window.imgError = function (img) {
+    const placeholder = document.createElement("div");
+    placeholder.className = "img-placeholder";
+    placeholder.innerHTML = placeholderSvg();
+    // If the img is the only child of a wrapper div (hero-image, card-image)
+    // replace just the img; keep the wrapper intact.
+    img.replaceWith(placeholder);
+  };
+
+
   const state = {
     currentCategory: "top",
     articles: [],
@@ -18,12 +30,10 @@
     lastFetched: null,
   };
 
-  // Cache fetched categories so switching back feels instant
+
   const articleCache = {};
 
-  // ----------------------------------------------------------------
-  // DOM refs
-  // ----------------------------------------------------------------
+
   const els = {
     contentArea: document.getElementById("content-area"),
     navButtons:  document.querySelectorAll(".nav-item button"),
@@ -35,9 +45,7 @@
     searchClose:  document.getElementById("btn-search-close"),
   };
 
-  // ----------------------------------------------------------------
-  // Utilities
-  // ----------------------------------------------------------------
+
 
   function timeAgo(timestamp) {
     const now = Date.now() / 1000;
@@ -79,14 +87,12 @@
     </svg>`;
   }
 
-  // ----------------------------------------------------------------
-  // Rendering helpers
-  // ----------------------------------------------------------------
+
 
   function renderHero(article) {
     const imageHtml = article.image
-      ? `<img src="${escapeHtml(article.image)}" alt="" loading="eager" onerror="this.parentElement.innerHTML='${escapeHtml('<div class="hero-image-placeholder">' + placeholderSvg() + '</div>')}'"/>`
-      : `<div class="hero-image-placeholder">${placeholderSvg()}</div>`;
+      ? `<img src="${escapeHtml(article.image)}" alt="" loading="eager" onerror="imgError(this)"/>`
+      : `<div class="img-placeholder">${placeholderSvg()}</div>`;
 
     return `
       <article class="hero">
@@ -114,11 +120,41 @@
         </div>
       </article>`;
   }
-
+  function renderMedia(article) {
+  
+  if (article.video) {
+    return `
+      <video
+        class="article-media"
+        src="${article.video}"
+        autoplay
+        muted
+        loop
+        playsinline
+        preload="metadata"
+        onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'article-media placeholder'}))"
+      ></video>
+     `;
+    }
+  
+  if (article.image) {
+    return `
+      <img
+        class="article-media${article.media_type === 'gif' ? ' is-gif' : ''}"
+        src="${article.image}"
+        alt=""
+        loading="lazy"
+        referrerpolicy="no-referrer"
+        onerror="imgError(this)"
+      />
+    `;
+  }
+  return `<div class="article-media placeholder"></div>`;
+}
   function renderCard(article, index) {
     const imageHtml = article.image
-      ? `<img src="${escapeHtml(article.image)}" alt="" loading="lazy" onerror="this.parentElement.innerHTML='<div class=\\"card-image-placeholder\\">${placeholderSvg()}</div>'"/>`
-      : `<div class="card-image-placeholder">${placeholderSvg()}</div>`;
+      ? `<img src="${escapeHtml(article.image)}" alt="" loading="lazy" onerror="imgError(this)"/>`
+      : `<div class="img-placeholder">${placeholderSvg()}</div>`;
 
     return `
       <article class="card" style="animation-delay:${index * 55}ms">
@@ -146,7 +182,7 @@
       return `<div class="error-state"><h3>Nothing found.</h3><p>Try refreshing or switching categories.</p></div>`;
     }
 
-    // Filter by search query if active
+    
     let filtered = articles;
     if (state.searchQuery) {
       const q = state.searchQuery.toLowerCase();
@@ -192,9 +228,7 @@
     </div>`;
   }
 
-  // ----------------------------------------------------------------
-  // Staggered card reveal (requestAnimationFrame trick)
-  // ----------------------------------------------------------------
+  
   function revealCards() {
     const cards = els.contentArea.querySelectorAll(".card");
     cards.forEach((card, i) => {
@@ -202,16 +236,13 @@
     });
   }
 
-  // ----------------------------------------------------------------
-  // Data fetching
-  // ----------------------------------------------------------------
+
   async function fetchArticles(category) {
-    // Check local cache first
     if (articleCache[category]) {
       const { articles, fetchedAt } = articleCache[category];
       const age = Date.now() - fetchedAt;
       if (age < 5 * 60 * 1000) {
-        // still fresh (< 5 mins)
+       
         return articles;
       }
     }
@@ -227,15 +258,13 @@
     return data.articles;
   }
 
-  // ----------------------------------------------------------------
-  // Main load / transition flow
-  // ----------------------------------------------------------------
+
   async function loadCategory(category, force = false) {
     if (state.isLoading) return;
     state.isLoading = true;
     state.currentCategory = category;
 
-    // Animate the old content out
+    
     const existing = els.contentArea.querySelector(".content-panel");
     if (existing) {
       existing.classList.remove("entering");
@@ -264,18 +293,14 @@
     }
   }
 
-  // ----------------------------------------------------------------
-  // Nav: active state
-  // ----------------------------------------------------------------
+
   function updateNavActive(category) {
     els.navButtons.forEach((btn) => {
       btn.classList.toggle("active", btn.dataset.category === category);
     });
   }
 
-  // ----------------------------------------------------------------
-  // Live clock
-  // ----------------------------------------------------------------
+ 
   function updateClock() {
     const now = new Date();
     const opts = {
@@ -291,9 +316,7 @@
     }
   }
 
-  // ----------------------------------------------------------------
-  // Search logic
-  // ----------------------------------------------------------------
+
   function openSearch() {
     els.searchOverlay.classList.add("open");
     setTimeout(() => els.searchInput.focus(), 50);
@@ -308,11 +331,8 @@
     revealCards();
   }
 
-  // ----------------------------------------------------------------
-  // Event listeners
-  // ----------------------------------------------------------------
+
   function bindEvents() {
-    // Category nav
     els.navButtons.forEach((btn) => {
       btn.addEventListener("click", () => {
         const cat = btn.dataset.category;
@@ -321,7 +341,7 @@
       });
     });
 
-    // Search open/close
+
     els.searchToggle.addEventListener("click", openSearch);
     els.searchClose && els.searchClose.addEventListener("click", closeSearch);
 
@@ -337,14 +357,14 @@
       }
     });
 
-    // Search input: filter in real time
+
     els.searchInput.addEventListener("input", (e) => {
       state.searchQuery = e.target.value.trim();
       els.contentArea.innerHTML = renderContent(state.articles);
       revealCards();
     });
 
-    // Refresh button
+
     els.refreshBtn.addEventListener("click", () => {
       if (state.isLoading) return;
       els.refreshBtn.classList.add("spinning");
@@ -354,14 +374,11 @@
     });
   }
 
-  // ----------------------------------------------------------------
-  // Auto-refresh every 5 minutes
-  // ----------------------------------------------------------------
+
+
   function startAutoRefresh() {
     setInterval(() => {
-      // Only auto-refresh if the tab is visible
       if (!document.hidden) {
-        // Invalidate cache for current category silently
         if (articleCache[state.currentCategory]) {
           delete articleCache[state.currentCategory];
         }
@@ -370,21 +387,17 @@
     }, 5 * 60 * 1000);
   }
 
-  // ----------------------------------------------------------------
-  // Boot
-  // ----------------------------------------------------------------
+
   function init() {
     updateClock();
     setInterval(updateClock, 30000);
 
     bindEvents();
     startAutoRefresh();
-
-    // Load initial content
     loadCategory("top");
   }
 
-  // Wait for DOM to be ready
+
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", init);
   } else {
