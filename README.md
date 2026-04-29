@@ -1,3 +1,6 @@
+
+![header](https://capsule-render.vercel.app/api?type=waving&height=300&color=gradient&text=The%20%Newswire&reversal=false&animation=twinkling&textBg=false&section=header)
+
 # Newswire
 
 A live news dashboard I put together over a few evenings and weeks throughout my breaks. It pulls headlines from Google News RSS feeds across several categories, serves them through a small Flask API, and displays everything in a dark editorial UI with smooth transitions between sections.
@@ -26,8 +29,8 @@ I built this mostly to have a cleaner alternative to opening a dozen news tabs i
 ## Running it locally
 
 ```bash
-git clone https://github.com/szymon42069/briefing.git
-cd briefing
+git clone https://github.com/szymon42069/Newswire.git
+cd Newswire
 
 pip install -r requirements.txt
 python app.py
@@ -60,7 +63,7 @@ It works surprisingly alright. My phone sits on charge on my desk and the server
 ## Project structure
 
 ```
-briefing/
+Newswire/
 ├── app.py              # Flask backend, RSS fetching, caching
 ├── requirements.txt
 ├── setup_termux.sh     # One-shot setup for Termux/Android
@@ -109,22 +112,31 @@ Example response:
 
 ## Potential improvements
 
-- Add support for the Financial Times RSS feeds, they have topic-specific ones for subscribers, so you will have to provide your login details or token. Don't you worry though because this will be stored locally.
-- Persist a read/unread state in localStorage
-- Add a dark/light theme toggle
-- Package it as a small systemd service so it starts automatically for Linux users (like me hehe)
-
-- Im also planning to add a source button too, that you can select sources you like to hear from and don't.
-- Maybe even possibly turning it into a apk or ipa for phones that will be available to download from the App Store/Google/Play Store.
+- Add support for the Financial Times RSS feeds, they have topic-specific ones for subscribers, so you will have to provide your login details or token. Don't you worry though because this will be stored locally.❌
+- Persist a read/unread state in localStorage❌
+- Add a dark/light theme toggle❌
+- Package it as a small systemd service so it starts automatically for Linux users (like me hehe)❌
+- Im also planning to add a source button too, that you can select sources you like to hear from and don't.❌
+- Maybe even possibly turning it into a apk or ipa for phones that will be available to download from the App Store/Google/Play Store.❌
+  
 - Also, im planning to add these websites too and add a specific filter onto them, so that you can select what source you want such as...
-- Al Jazeera English (AJE)
-- The Financial Times (For Economics)
-- Reuters
-- The Guardian
-- C-SPAN (Politics)
+  Al Jazeera English (AJE)
+  The Financial Times (For Economics)
+  Reuters
+  The Guardian
+  C-SPAN (Politics)
 
+## Star History
 
+<a href="https://www.star-history.com/?repos=szymon42069%2FNewswire&type=date&legend=top-left">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=szymon42069/Newswire&type=date&theme=dark&legend=top-left" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=szymon42069/Newswire&type=date&legend=top-left" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=szymon42069/Newswire&type=date&legend=top-left" />
+ </picture>
+</a>
 
 ## Licence
 
-MIT — do whatever you like with it.
+MIT — do whatever you like with it.✅
+
