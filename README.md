@@ -26,8 +26,8 @@ I built this mostly to have a cleaner alternative to opening a dozen news tabs i
 ## Running it locally
 
 ```bash
-git clone https://github.com/szymon42069/briefing.git
-cd briefing
+git clone https://github.com/szymon42069/Newswire.git
+cd Newswire
 
 pip install -r requirements.txt
 python app.py
@@ -60,7 +60,7 @@ It works surprisingly alright. My phone sits on charge on my desk and the server
 ## Project structure
 
 ```
-briefing/
+Newswire/
 ├── app.py              # Flask backend, RSS fetching, caching
 ├── requirements.txt
 ├── setup_termux.sh     # One-shot setup for Termux/Android
