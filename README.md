@@ -111,10 +111,10 @@ Example response:
 
 ## Potential improvements
 
-- Add support for the Financial Times RSS feeds, they have topic-specific ones for subscribers, so you will have to provide your login details or token. Don't you worry though because this will be stored locally.
-- Persist a read/unread state in localStorage
-- Add a dark/light theme toggle
-- Package it as a small systemd service so it starts automatically for Linux users (like me hehe)
+- Add support for the Financial Times RSS feeds, they have topic-specific ones for subscribers, so you will have to provide your login details or token. Don't you worry though because this will be stored locally.❌
+- Persist a read/unread state in localStorage❌
+- Add a dark/light theme toggle❌
+- Package it as a small systemd service so it starts automatically for Linux users (like me hehe)❌
 
 - Im also planning to add a source button too, that you can select sources you like to hear from and don't.
 - Maybe even possibly turning it into a apk or ipa for phones that will be available to download from the App Store/Google/Play Store.
@@ -129,5 +129,5 @@ Example response:
 
 ## Licence
 
-MIT — do whatever you like with it.
+MIT — do whatever you like with it.✅
 
