@@ -1,9 +1,6 @@
 import requests
 from bs4 import BeautifulSoup
 from concurrent.futures import ThreadPoolExecutor
-from urllib.parse import urlparse, parse_qs
-import base64
-
 import re
 import time
 import logging
@@ -17,15 +14,35 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-
+# Multiple feeds per category — merged and deduplicated by title
 RSS_FEEDS = {
-    "top":        "https://news.google.com/rss?hl=en-GB&gl=GB&ceid=GB:en",
-    "uk":         "https://news.google.com/rss/headlines/section/geo/GB?hl=en-GB&gl=GB&ceid=GB:en",
-    "world":      "https://news.google.com/rss/headlines/section/topic/WORLD?hl=en-GB&gl=GB&ceid=GB:en",
-    "business":   "https://news.google.com/rss/headlines/section/topic/BUSINESS?hl=en-GB&gl=GB&ceid=GB:en",
-    "technology": "https://news.google.com/rss/headlines/section/topic/TECHNOLOGY?hl=en-GB&gl=GB&ceid=GB:en",
-    "science":    "https://news.google.com/rss/headlines/section/topic/SCIENCE?hl=en-GB&gl=GB&ceid=GB:en",
-    "sport":      "https://news.google.com/rss/headlines/section/topic/SPORTS?hl=en-GB&gl=GB&ceid=GB:en",
+    "top": [
+        "https://feeds.bbci.co.uk/news/rss.xml",
+        "https://feeds.skynews.com/feeds/rss/home.xml",
+    ],
+    "uk": [
+        "https://feeds.bbci.co.uk/news/uk/rss.xml",
+        "https://feeds.skynews.com/feeds/rss/uk.xml",
+    ],
+    "world": [
+        "https://feeds.bbci.co.uk/news/world/rss.xml",
+        "https://feeds.skynews.com/feeds/rss/world.xml",
+    ],
+    "business": [
+        "https://feeds.bbci.co.uk/news/business/rss.xml",
+        "https://feeds.skynews.com/feeds/rss/business.xml",
+    ],
+    "technology": [
+        "https://feeds.bbci.co.uk/news/technology/rss.xml",
+        "https://feeds.skynews.com/feeds/rss/technology.xml",
+    ],
+    "science": [
+        "https://feeds.bbci.co.uk/news/science_and_environment/rss.xml",
+    ],
+    "sport": [
+        "https://feeds.bbci.co.uk/sport/rss.xml",
+        "https://feeds.skynews.com/feeds/rss/sport.xml",
+    ],
 }
 
 
@@ -44,9 +61,7 @@ def _strip_html(raw: str) -> str:
 
 
 # ---------------------------------------------------------------------------
-# HTTP session with browser headers + Google consent cookies.
-# The SOCS / CONSENT cookies are what was causing every redirect to dead-end
-# at consent.google.com instead of continuing to the real article page.
+# HTTP session with browser-like headers
 # ---------------------------------------------------------------------------
 _SESSION = requests.Session()
 _SESSION.headers.update({
@@ -55,48 +70,9 @@ _SESSION.headers.update({
         "AppleWebKit/537.36 (KHTML, like Gecko) "
         "Chrome/124.0.0.0 Safari/537.36"
     ),
-    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
     "Accept-Language": "en-GB,en;q=0.9",
-    "Accept-Encoding": "gzip, deflate, br",
-    "DNT": "1",
-    "Connection": "keep-alive",
-    "Upgrade-Insecure-Requests": "1",
 })
-_SESSION.cookies.set(
-    "SOCS",
-    "CAISHAgCEhJnd3NfMjAyMzA4MDktMF9SQzQaAmVuIAEaBgiA_LSnBg",
-    domain=".google.com",
-)
-_SESSION.cookies.set("CONSENT", "YES+cb", domain=".google.com")
-
-
-# ---------------------------------------------------------------------------
-# URL + media resolution
-# ---------------------------------------------------------------------------
-
-def _follow_to_real_url(google_url: str) -> str:
-    try:
-        if "/rss/articles/" in google_url:
-            article_id = google_url.split("/rss/articles/")[-1]
-        elif "/articles/" in google_url:
-            article_id = google_url.split("/articles/")[-1]
-        else:
-            return google_url
-
-        article_id = article_id.split("?")[0]
-        article_id += "=" * ((4 - len(article_id) % 4) % 4)
-        decoded = base64.urlsafe_b64decode(article_id)
-
-        match = re.search(rb"https?://[A-Za-z0-9\-._~:/?#\[\]@!$&'()*+,;=%]+", decoded)
-        if match:
-            url = match.group(0).decode("utf-8", errors="replace")
-            url = re.sub(r"[^\x21-\x7E].*$", "", url)
-            if "news.google.com" not in url:
-                return url
-    except Exception as exc:
-        logger.debug("URL decode failed for %s: %s", google_url, exc)
-
-    return google_url
 
 
 def _scrape_media(url: str) -> dict:
@@ -164,53 +140,26 @@ def _scrape_media(url: str) -> dict:
 
 
 def _resolve_article(article: dict) -> dict:
-    """
-    Two-step resolution for every article:
-      1. Unwind the Google News redirect → real publisher URL (updates article['link']).
-      2. Scrape og:image / og:video from the real page if the RSS had none.
-    Results are cached keyed by the original Google URL.
-    """
-    original_url = article["link"]
-    needs_media = article.get("_needs_resolve", False)
+    """Scrape og:image / og:video from the article page if the RSS had none."""
+    if not article.get("_needs_resolve", False):
+        return article
 
+    url = article["link"]
     now = time.time()
-    hit = _article_cache.get(original_url)
-    if hit and isinstance(hit, tuple) and len(hit) == 2:
+    hit = _article_cache.get(url)
+    if hit and isinstance(hit, tuple):
         cached_at, data = hit
         if now - cached_at < ARTICLE_CACHE_TTL:
-            article["link"] = data["real_url"]
-            if needs_media:
-                article["image"] = data["image"]
-                article["video"] = data["video"]
-                article["media_type"] = data["type"]
+            article["image"] = data["image"]
+            article["video"] = data["video"]
+            article["media_type"] = data["type"]
             return article
 
-    real_url = _follow_to_real_url(original_url)
-
-    media = {"image": None, "video": None, "type": None}
-    if needs_media and real_url != original_url:
-        media = _scrape_media(real_url)
-
-    data = {
-        "real_url": real_url,
-        "image": media["image"],
-        "video": media["video"],
-        "type": media["type"],
-    }
-    _article_cache[original_url] = (now, data)
-
-    article["link"] = real_url
-    if needs_media:
-        article["image"] = media["image"]
-        article["video"] = media["video"]
-        article["media_type"] = media["type"]
-
-    logger.info(
-        "Resolved %-48s → %-48s  image=%s",
-        original_url[:48],
-        real_url[:48],
-        bool(media["image"]),
-    )
+    media = _scrape_media(url)
+    _article_cache[url] = (now, media)
+    article["image"] = media["image"]
+    article["video"] = media["video"]
+    article["media_type"] = media["type"]
     return article
 
 
@@ -284,18 +233,27 @@ def fetch_feed(category: str) -> list:
             logger.info("Serving '%s' from cache", category)
             return articles
 
-    url = RSS_FEEDS.get(category, RSS_FEEDS["top"])
-    logger.info("Fetching feed: %s", url)
-    feed = feedparser.parse(url)
+    urls = RSS_FEEDS.get(category, RSS_FEEDS["top"])
+    if isinstance(urls, str):
+        urls = [urls]
 
-    if feed.bozo and not feed.entries:
-        raise RuntimeError(f"Failed to parse feed for '{category}'")
+    all_entries = []
+    seen_titles = set()
+    for url in urls:
+        logger.info("Fetching feed: %s", url)
+        feed = feedparser.parse(url)
+        for e in feed.entries:
+            title = e.get("title", "")
+            key = title[:60].lower()
+            if key not in seen_titles:
+                seen_titles.add(key)
+                all_entries.append(e)
 
-    articles = [_parse_entry(e) for e in feed.entries[:30]]
+    if not all_entries:
+        raise RuntimeError(f"No entries found for '{category}'")
 
-    # Resolve ALL articles in parallel:
-    #  • Every article: Google redirect → real publisher URL
-    #  • Articles missing media: scrape og:image / og:video from real page
+    articles = [_parse_entry(e) for e in all_entries[:30]]
+
     with ThreadPoolExecutor(max_workers=12) as pool:
         articles = list(pool.map(_resolve_article, articles))
 
