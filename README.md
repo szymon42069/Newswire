@@ -118,6 +118,7 @@ Example response:
 - Package it as a small systemd service so it starts automatically for Linux users (like me hehe)❌
 - Im also planning to add a source button too, that you can select sources you like to hear from and don't.❌
 - Maybe even possibly turning it into a apk or ipa for phones that will be available to download from the App Store/Google/Play Store.❌
+- Image support ✅
   
 - Also, im planning to add these websites too and add a specific filter onto them, so that you can select what source you want such as...
   Al Jazeera English (AJE)
@@ -138,5 +139,5 @@ Example response:
 
 ## Licence
 
-MIT — do whatever you like with it.✅
+MIT — do whatever you like with it.
 
