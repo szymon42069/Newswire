@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="https://capsule-render.vercel.app/api?text=Hey Everyone!🕹️&animation=fadeIn&type=waving&color=gradient&height=100"/>
+</p>
+
 ![header](https://capsule-render.vercel.app/api?type=waving&height=300&color=gradient&text=The%20%Newswire&reversal=false&animation=twinkling&textBg=false&section=header)
 
 # Newswire
