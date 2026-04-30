@@ -16,13 +16,6 @@
     const placeholder = document.createElement("div");
     placeholder.className = "img-placeholder";
     placeholder.innerHTML = placeholderSvg();
-<<<<<<< HEAD
-    // If the img is the only child of a wrapper div (hero-image, card-image)
-    // replace just the img; keep the wrapper intact.
-    img.replaceWith(placeholder);
-  };
-
-=======
     img.replaceWith(placeholder);
   };
 
@@ -34,7 +27,11 @@
     return `/api/proxy?url=${encodeURIComponent(url)}`;
   }
 
->>>>>>> master
+  function proxyThumb(url) {
+    if (!url) return null;
+    return `/api/proxy?thumb=1&url=${encodeURIComponent(url)}`;
+  }
+
 
   const state = {
     currentCategory: "top",
@@ -42,10 +39,34 @@
     isLoading: false,
     searchQuery: "",
     lastFetched: null,
+    mediaLoading: false,
+    mediaProgress: 0,
+    mediaToken: 0,
   };
 
 
   const articleCache = {};
+  const READ_KEY = "newswire-read-links";
+
+  function getReadSet() {
+    try { return new Set(JSON.parse(localStorage.getItem(READ_KEY) || "[]")); }
+    catch (_) { return new Set(); }
+  }
+
+  function articleId(article) {
+    return article.link || article.title;
+  }
+
+  function isRead(article) {
+    return getReadSet().has(articleId(article));
+  }
+
+  function markRead(id) {
+    if (!id) return;
+    const read = getReadSet();
+    read.add(id);
+    try { localStorage.setItem(READ_KEY, JSON.stringify([...read])); } catch (_) {}
+  }
 
 
   const els = {
@@ -94,11 +115,7 @@
   }
 
   function placeholderSvg() {
-<<<<<<< HEAD
-    return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-=======
     return `<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="opacity:.12">
->>>>>>> master
       <rect x="3" y="3" width="18" height="18" rx="2"/>
       <path d="M3 9l4-4 4 4 4-6 4 6"/>
       <circle cx="8.5" cy="13.5" r="1.5"/>
@@ -108,22 +125,17 @@
 
 
   function renderHero(article) {
-    const imageHtml = article.image
-<<<<<<< HEAD
-      ? `<img src="${escapeHtml(article.image)}" alt="" loading="eager" onerror="imgError(this)"/>`
-=======
-      ? `<img src="${escapeHtml(proxyImg(article.image))}" alt="" loading="eager" referrerpolicy="no-referrer" onerror="imgError(this)"/>`
->>>>>>> master
-      : `<div class="img-placeholder">${placeholderSvg()}</div>`;
+    const id = articleId(article);
+    const mediaHtml = renderMedia(article, true);
 
     return `
       <article class="hero">
-        <div class="hero-image">${imageHtml}</div>
+        <div class="hero-image">${mediaHtml}</div>
         <div class="hero-body">
           <div>
             <p class="hero-category-label">— ${escapeHtml(formatCategoryLabel(state.currentCategory))}</p>
             <h2 class="hero-title">
-              <a href="${escapeHtml(article.link)}" target="_blank" rel="noopener">
+              <a href="${escapeHtml(article.link)}" target="_blank" rel="noopener" data-read-id="${escapeHtml(id)}">
                 ${escapeHtml(article.title)}
               </a>
             </h2>
@@ -134,87 +146,56 @@
               ${article.source ? `<span class="source-tag">${escapeHtml(article.source)}</span>` : ""}
               <span class="time-tag">${timeAgo(article.timestamp)}</span>
             </div>
-            <a href="${escapeHtml(article.link)}" target="_blank" rel="noopener" class="read-link">
-              Read
+            <a href="${escapeHtml(article.link)}" target="_blank" rel="noopener" class="read-link" data-read-id="${escapeHtml(id)}">
+              ${isRead(article) ? "Read again" : "Read"}
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
             </a>
           </div>
         </div>
       </article>`;
   }
-  function renderMedia(article) {
-<<<<<<< HEAD
-  
-=======
->>>>>>> master
+  function renderMedia(article, eager = false) {
   if (article.video) {
     return `
       <video
         class="article-media"
-<<<<<<< HEAD
-        src="${article.video}"
-        autoplay
-        muted
-        loop
-        playsinline
-        preload="metadata"
-        onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'article-media placeholder'}))"
-      ></video>
-     `;
-    }
-  
-  if (article.image) {
-    return `
-      <img
-        class="article-media${article.media_type === 'gif' ? ' is-gif' : ''}"
-        src="${article.image}"
-        alt=""
-        loading="lazy"
-        referrerpolicy="no-referrer"
-        onerror="imgError(this)"
-      />
-    `;
-=======
         src="${escapeHtml(proxyImg(article.video))}"
-        autoplay muted loop playsinline preload="metadata"
+        autoplay muted loop playsinline preload="${eager ? "auto" : "metadata"}"
+        poster="${article.image ? escapeHtml(proxyImg(article.image)) : ""}"
         onerror="imgError(this)"
       ></video>`;
   }
   if (article.image) {
+    const full = escapeHtml(proxyImg(article.image));
     return `
       <img
-        class="article-media"
-        src="${escapeHtml(proxyImg(article.image))}"
-        alt="" loading="lazy"
+        class="article-media progressive-img"
+        src="${escapeHtml(proxyThumb(article.image))}"
+        data-full-src="${full}"
+        alt="" loading="${eager ? "eager" : "lazy"}" referrerpolicy="no-referrer"
         onerror="imgError(this)"
       />`;
->>>>>>> master
   }
   return `<div class="article-media placeholder"></div>`;
 }
   function renderCard(article, index) {
-    const imageHtml = article.image
-<<<<<<< HEAD
-      ? `<img src="${escapeHtml(article.image)}" alt="" loading="lazy" onerror="imgError(this)"/>`
-=======
-      ? `<img src="${escapeHtml(proxyImg(article.image))}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="imgError(this)"/>`
->>>>>>> master
-      : `<div class="img-placeholder">${placeholderSvg()}</div>`;
+    const id = articleId(article);
+    const mediaHtml = renderMedia(article);
 
     return `
-      <article class="card" style="animation-delay:${index * 55}ms">
-        <div class="card-image">${imageHtml}</div>
+      <article class="card${isRead(article) ? " is-read" : ""}" style="animation-delay:${index * 55}ms">
+        <div class="card-image">${mediaHtml}</div>
         <div class="card-body">
           ${article.source ? `<p class="card-source">${escapeHtml(article.source)}</p>` : ""}
           <h3 class="card-title">
-            <a href="${escapeHtml(article.link)}" target="_blank" rel="noopener">
+            <a href="${escapeHtml(article.link)}" target="_blank" rel="noopener" data-read-id="${escapeHtml(id)}">
               ${escapeHtml(article.title)}
             </a>
           </h3>
           ${article.summary ? `<p class="card-summary">${escapeHtml(article.summary)}</p>` : ""}
           <div class="card-footer">
             <span class="card-time">${timeAgo(article.timestamp)}</span>
-            <a href="${escapeHtml(article.link)}" target="_blank" rel="noopener" class="card-arrow" aria-label="Read article">
+            <a href="${escapeHtml(article.link)}" target="_blank" rel="noopener" class="card-arrow" aria-label="Read article" data-read-id="${escapeHtml(id)}">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
             </a>
           </div>
@@ -266,6 +247,14 @@
     </div>`;
   }
 
+  function renderMediaProgress() {
+    if (!state.mediaLoading) return "";
+    return `<div class="media-progress" aria-label="Loading media">
+      <button class="media-skip" id="media-skip" type="button">Skip images</button>
+      <span style="width:${state.mediaProgress}%"></span>
+    </div>`;
+  }
+
   function renderError(msg) {
     return `<div class="error-state">
       <h3>Couldn't load stories.</h3>
@@ -278,6 +267,19 @@
     const cards = els.contentArea.querySelectorAll(".card");
     cards.forEach((card, i) => {
       setTimeout(() => card.classList.add("revealed"), i * 55);
+    });
+  }
+
+  function upgradeImages() {
+    els.contentArea.querySelectorAll("img.progressive-img[data-full-src]").forEach((img) => {
+      const full = img.dataset.fullSrc;
+      const hi = new Image();
+      hi.onload = () => {
+        img.src = full;
+        img.classList.add("is-full");
+        img.removeAttribute("data-full-src");
+      };
+      hi.src = full;
     });
   }
 
@@ -329,6 +331,8 @@
       state.lastFetched = Date.now();
       els.contentArea.innerHTML = renderContent(articles);
       revealCards();
+      upgradeImages();
+      resolveMedia(category, articles);
     } catch (err) {
       console.error("Fetch error:", err);
       els.contentArea.innerHTML = renderError(err.message);
@@ -355,6 +359,7 @@
       year: "numeric",
       hour: "2-digit",
       minute: "2-digit",
+      second: "2-digit",
     };
     if (els.liveDate) {
       els.liveDate.textContent = now.toLocaleString("en-GB", opts);
@@ -417,6 +422,49 @@
         els.refreshBtn.classList.remove("spinning");
       });
     });
+
+    els.contentArea.addEventListener("click", (e) => {
+      const link = e.target.closest("[data-read-id]");
+      if (!link) return;
+      markRead(link.dataset.readId);
+      link.closest(".card")?.classList.add("is-read");
+    });
+  }
+
+  async function resolveMedia(category, articles) {
+    const token = ++state.mediaToken;
+    state.mediaLoading = true;
+    state.mediaProgress = 15;
+    els.contentArea.insertAdjacentHTML("afterbegin", renderMediaProgress());
+    document.getElementById("media-skip")?.addEventListener("click", () => {
+      state.mediaToken++;
+      state.mediaLoading = false;
+      els.contentArea.querySelector(".media-progress")?.remove();
+    });
+    try {
+      const response = await fetch("/api/media", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ articles }),
+      });
+      state.mediaProgress = 70;
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || `HTTP ${response.status}`);
+      if (token !== state.mediaToken) return;
+      if (category !== state.currentCategory) return;
+      state.articles = data.articles;
+      articleCache[category] = { articles: data.articles, fetchedAt: Date.now() };
+      state.mediaProgress = 100;
+      els.contentArea.innerHTML = renderContent(data.articles);
+      revealCards();
+      upgradeImages();
+    } catch (err) {
+      console.warn("Media load failed:", err);
+    } finally {
+      state.mediaLoading = false;
+      const bar = els.contentArea.querySelector(".media-progress");
+      if (bar) bar.remove();
+    }
   }
 
 
@@ -449,8 +497,6 @@
     init();
   }
 })();
-<<<<<<< HEAD
-=======
 
 /* =========================================================
    THEME TOGGLE — dark → light → blue, with a circular
@@ -545,24 +591,68 @@
 })();
 
 /* =========================================================
-   PIN FIELD — traveling sine wave left → right.
-   Each pin gets an animation-delay offset so the CSS
-   pin-wave keyframe fires in sequence across the row.
+   WAVE CANVAS — smooth orange ripple sine wave (light theme).
+   Uses requestAnimationFrame + canvas for a real wave shape.
    ========================================================= */
 (function () {
   const field = document.getElementById('block-field');
-  if (!field || field.childElementCount) return;
-  const COUNT  = 50;
-  const PERIOD = 1.8;   // seconds — must match CSS animation-duration
-  const frag = document.createDocumentFragment();
-  for (let i = 0; i < COUNT; i++) {
-    const pin = document.createElement('div');
-    pin.className = 'pin';
-    // negative delay = pin starts part-way through its cycle already
-    // stagger = one full period spread evenly across all pins
-    pin.style.animationDelay = `${(-(i / COUNT) * PERIOD).toFixed(3)}s`;
-    frag.appendChild(pin);
+  if (!field) return;
+
+  const canvas = document.createElement('canvas');
+  field.appendChild(canvas);
+  const ctx = canvas.getContext('2d');
+  let t = 0, raf;
+
+  function resize() {
+    canvas.width  = field.offsetWidth  || window.innerWidth;
+    canvas.height = field.offsetHeight || 320;
   }
-  field.appendChild(frag);
+  resize();
+  window.addEventListener('resize', resize);
+
+  function draw() {
+    const W = canvas.width, H = canvas.height;
+    ctx.clearRect(0, 0, W, H);
+
+    const theme = document.documentElement.getAttribute('data-theme');
+    if (theme === 'light') {
+      // Three layered sine waves, each filled down to bottom
+      const layers = [
+        { amp: 28, freq: 0.016, speed: 1.0, yBase: H * 0.52, colors: ['rgba(255,160,60,0.85)', 'rgba(184,81,0,0.9)'] },
+        { amp: 18, freq: 0.024, speed: 1.4, yBase: H * 0.65, colors: ['rgba(255,200,100,0.6)', 'rgba(220,110,0,0.7)'] },
+        { amp: 12, freq: 0.010, speed: 0.7, yBase: H * 0.42, colors: ['rgba(255,136,38,0.4)', 'rgba(255,180,80,0.5)'] },
+      ];
+
+      layers.forEach(layer => {
+        ctx.beginPath();
+        for (let x = 0; x <= W; x += 3) {
+          const y = layer.yBase
+            + Math.sin(x * layer.freq + t * layer.speed) * layer.amp
+            + Math.sin(x * layer.freq * 1.6 - t * layer.speed * 0.8) * layer.amp * 0.35;
+          x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+        }
+        ctx.lineTo(W, H);
+        ctx.lineTo(0, H);
+        ctx.closePath();
+
+        const grad = ctx.createLinearGradient(0, layer.yBase - layer.amp, 0, H);
+        grad.addColorStop(0, layer.colors[0]);
+        grad.addColorStop(1, layer.colors[1]);
+        ctx.fillStyle = grad;
+        ctx.fill();
+      });
+
+      // Soft glow overlay at the bottom center
+      const glow = ctx.createRadialGradient(W/2, H, 0, W/2, H, W * 0.55);
+      glow.addColorStop(0, 'rgba(255,140,40,0.18)');
+      glow.addColorStop(1, 'transparent');
+      ctx.fillStyle = glow;
+      ctx.fillRect(0, 0, W, H);
+    }
+
+    t += 0.022;
+    raf = requestAnimationFrame(draw);
+  }
+
+  draw();
 })();
->>>>>>> master

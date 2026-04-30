@@ -27,6 +27,11 @@
     return `/api/proxy?url=${encodeURIComponent(url)}`;
   }
 
+  function proxyThumb(url) {
+    if (!url) return null;
+    return `/api/proxy?thumb=1&url=${encodeURIComponent(url)}`;
+  }
+
 
   const state = {
     currentCategory: "top",
@@ -34,10 +39,34 @@
     isLoading: false,
     searchQuery: "",
     lastFetched: null,
+    mediaLoading: false,
+    mediaProgress: 0,
+    mediaToken: 0,
   };
 
 
   const articleCache = {};
+  const READ_KEY = "newswire-read-links";
+
+  function getReadSet() {
+    try { return new Set(JSON.parse(localStorage.getItem(READ_KEY) || "[]")); }
+    catch (_) { return new Set(); }
+  }
+
+  function articleId(article) {
+    return article.link || article.title;
+  }
+
+  function isRead(article) {
+    return getReadSet().has(articleId(article));
+  }
+
+  function markRead(id) {
+    if (!id) return;
+    const read = getReadSet();
+    read.add(id);
+    try { localStorage.setItem(READ_KEY, JSON.stringify([...read])); } catch (_) {}
+  }
 
 
   const els = {
@@ -96,18 +125,17 @@
 
 
   function renderHero(article) {
-    const imageHtml = article.image
-      ? `<img src="${escapeHtml(proxyImg(article.image))}" alt="" loading="eager" referrerpolicy="no-referrer" onerror="imgError(this)"/>`
-      : `<div class="img-placeholder">${placeholderSvg()}</div>`;
+    const id = articleId(article);
+    const mediaHtml = renderMedia(article, true);
 
     return `
       <article class="hero">
-        <div class="hero-image">${imageHtml}</div>
+        <div class="hero-image">${mediaHtml}</div>
         <div class="hero-body">
           <div>
             <p class="hero-category-label">— ${escapeHtml(formatCategoryLabel(state.currentCategory))}</p>
             <h2 class="hero-title">
-              <a href="${escapeHtml(article.link)}" target="_blank" rel="noopener">
+              <a href="${escapeHtml(article.link)}" target="_blank" rel="noopener" data-read-id="${escapeHtml(id)}">
                 ${escapeHtml(article.title)}
               </a>
             </h2>
@@ -118,54 +146,56 @@
               ${article.source ? `<span class="source-tag">${escapeHtml(article.source)}</span>` : ""}
               <span class="time-tag">${timeAgo(article.timestamp)}</span>
             </div>
-            <a href="${escapeHtml(article.link)}" target="_blank" rel="noopener" class="read-link">
-              Read
+            <a href="${escapeHtml(article.link)}" target="_blank" rel="noopener" class="read-link" data-read-id="${escapeHtml(id)}">
+              ${isRead(article) ? "Read again" : "Read"}
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
             </a>
           </div>
         </div>
       </article>`;
   }
-  function renderMedia(article) {
+  function renderMedia(article, eager = false) {
   if (article.video) {
     return `
       <video
         class="article-media"
         src="${escapeHtml(proxyImg(article.video))}"
-        autoplay muted loop playsinline preload="metadata"
+        autoplay muted loop playsinline preload="${eager ? "auto" : "metadata"}"
+        poster="${article.image ? escapeHtml(proxyImg(article.image)) : ""}"
         onerror="imgError(this)"
       ></video>`;
   }
   if (article.image) {
+    const full = escapeHtml(proxyImg(article.image));
     return `
       <img
-        class="article-media"
-        src="${escapeHtml(proxyImg(article.image))}"
-        alt="" loading="lazy"
+        class="article-media progressive-img"
+        src="${escapeHtml(proxyThumb(article.image))}"
+        data-full-src="${full}"
+        alt="" loading="${eager ? "eager" : "lazy"}" referrerpolicy="no-referrer"
         onerror="imgError(this)"
       />`;
   }
   return `<div class="article-media placeholder"></div>`;
 }
   function renderCard(article, index) {
-    const imageHtml = article.image
-      ? `<img src="${escapeHtml(proxyImg(article.image))}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="imgError(this)"/>`
-      : `<div class="img-placeholder">${placeholderSvg()}</div>`;
+    const id = articleId(article);
+    const mediaHtml = renderMedia(article);
 
     return `
-      <article class="card" style="animation-delay:${index * 55}ms">
-        <div class="card-image">${imageHtml}</div>
+      <article class="card${isRead(article) ? " is-read" : ""}" style="animation-delay:${index * 55}ms">
+        <div class="card-image">${mediaHtml}</div>
         <div class="card-body">
           ${article.source ? `<p class="card-source">${escapeHtml(article.source)}</p>` : ""}
           <h3 class="card-title">
-            <a href="${escapeHtml(article.link)}" target="_blank" rel="noopener">
+            <a href="${escapeHtml(article.link)}" target="_blank" rel="noopener" data-read-id="${escapeHtml(id)}">
               ${escapeHtml(article.title)}
             </a>
           </h3>
           ${article.summary ? `<p class="card-summary">${escapeHtml(article.summary)}</p>` : ""}
           <div class="card-footer">
             <span class="card-time">${timeAgo(article.timestamp)}</span>
-            <a href="${escapeHtml(article.link)}" target="_blank" rel="noopener" class="card-arrow" aria-label="Read article">
+            <a href="${escapeHtml(article.link)}" target="_blank" rel="noopener" class="card-arrow" aria-label="Read article" data-read-id="${escapeHtml(id)}">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
             </a>
           </div>
@@ -217,6 +247,14 @@
     </div>`;
   }
 
+  function renderMediaProgress() {
+    if (!state.mediaLoading) return "";
+    return `<div class="media-progress" aria-label="Loading media">
+      <button class="media-skip" id="media-skip" type="button">Skip images</button>
+      <span style="width:${state.mediaProgress}%"></span>
+    </div>`;
+  }
+
   function renderError(msg) {
     return `<div class="error-state">
       <h3>Couldn't load stories.</h3>
@@ -229,6 +267,19 @@
     const cards = els.contentArea.querySelectorAll(".card");
     cards.forEach((card, i) => {
       setTimeout(() => card.classList.add("revealed"), i * 55);
+    });
+  }
+
+  function upgradeImages() {
+    els.contentArea.querySelectorAll("img.progressive-img[data-full-src]").forEach((img) => {
+      const full = img.dataset.fullSrc;
+      const hi = new Image();
+      hi.onload = () => {
+        img.src = full;
+        img.classList.add("is-full");
+        img.removeAttribute("data-full-src");
+      };
+      hi.src = full;
     });
   }
 
@@ -280,6 +331,8 @@
       state.lastFetched = Date.now();
       els.contentArea.innerHTML = renderContent(articles);
       revealCards();
+      upgradeImages();
+      resolveMedia(category, articles);
     } catch (err) {
       console.error("Fetch error:", err);
       els.contentArea.innerHTML = renderError(err.message);
@@ -306,6 +359,7 @@
       year: "numeric",
       hour: "2-digit",
       minute: "2-digit",
+      second: "2-digit",
     };
     if (els.liveDate) {
       els.liveDate.textContent = now.toLocaleString("en-GB", opts);
@@ -368,6 +422,49 @@
         els.refreshBtn.classList.remove("spinning");
       });
     });
+
+    els.contentArea.addEventListener("click", (e) => {
+      const link = e.target.closest("[data-read-id]");
+      if (!link) return;
+      markRead(link.dataset.readId);
+      link.closest(".card")?.classList.add("is-read");
+    });
+  }
+
+  async function resolveMedia(category, articles) {
+    const token = ++state.mediaToken;
+    state.mediaLoading = true;
+    state.mediaProgress = 15;
+    els.contentArea.insertAdjacentHTML("afterbegin", renderMediaProgress());
+    document.getElementById("media-skip")?.addEventListener("click", () => {
+      state.mediaToken++;
+      state.mediaLoading = false;
+      els.contentArea.querySelector(".media-progress")?.remove();
+    });
+    try {
+      const response = await fetch("/api/media", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ articles }),
+      });
+      state.mediaProgress = 70;
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || `HTTP ${response.status}`);
+      if (token !== state.mediaToken) return;
+      if (category !== state.currentCategory) return;
+      state.articles = data.articles;
+      articleCache[category] = { articles: data.articles, fetchedAt: Date.now() };
+      state.mediaProgress = 100;
+      els.contentArea.innerHTML = renderContent(data.articles);
+      revealCards();
+      upgradeImages();
+    } catch (err) {
+      console.warn("Media load failed:", err);
+    } finally {
+      state.mediaLoading = false;
+      const bar = els.contentArea.querySelector(".media-progress");
+      if (bar) bar.remove();
+    }
   }
 
 
@@ -399,9 +496,6 @@
   } else {
     init();
   }
-<<<<<<< HEAD
-})();
-=======
 })();
 
 /* =========================================================
@@ -562,4 +656,3 @@
 
   draw();
 })();
->>>>>>> master

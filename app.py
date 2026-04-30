@@ -8,6 +8,11 @@ from email.utils import parsedate_to_datetime
 from flask import Flask, jsonify, render_template, request, Response
 
 import feedparser
+try:
+    from PIL import Image
+except Exception:
+    Image = None
+from io import BytesIO
 
 app = Flask(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -19,29 +24,69 @@ RSS_FEEDS = {
     "top": [
         "https://feeds.bbci.co.uk/news/rss.xml",
         "https://feeds.skynews.com/feeds/rss/home.xml",
+        "https://www.aljazeera.com/xml/rss/all.xml",
+        "https://www.theguardian.com/world/rss",
+        "https://feeds.npr.org/1001/rss.xml",
+        "https://www.france24.com/en/rss",
+        "https://rss.dw.com/rdf/rss-en-all",
+        "https://feeds.washingtonpost.com/rss/world",
+        "https://news.google.com/rss/topstories?hl=en-GB&gl=GB&ceid=GB:en",
+        "https://news.google.com/rss/search?q=site:reuters.com&hl=en-GB&gl=GB&ceid=GB:en",
+        "https://news.google.com/rss/search?q=site:ft.com&hl=en-GB&gl=GB&ceid=GB:en",
+        "https://news.google.com/rss/search?q=site:c-span.org&hl=en-GB&gl=GB&ceid=GB:en",
     ],
     "uk": [
         "https://feeds.bbci.co.uk/news/uk/rss.xml",
         "https://feeds.skynews.com/feeds/rss/uk.xml",
+        "https://www.theguardian.com/uk-news/rss",
+        "https://feeds.npr.org/1001/rss.xml",
+        "https://news.google.com/rss/headlines/section/topic/NATION?hl=en-GB&gl=GB&ceid=GB:en",
+        "https://news.google.com/rss/search?q=site:reuters.com+UK&hl=en-GB&gl=GB&ceid=GB:en",
     ],
     "world": [
         "https://feeds.bbci.co.uk/news/world/rss.xml",
         "https://feeds.skynews.com/feeds/rss/world.xml",
+        "https://www.aljazeera.com/xml/rss/all.xml",
+        "https://www.theguardian.com/world/rss",
+        "https://feeds.npr.org/1004/rss.xml",
+        "https://www.france24.com/en/rss",
+        "https://rss.dw.com/rdf/rss-en-world",
+        "https://feeds.washingtonpost.com/rss/world",
+        "https://news.google.com/rss/headlines/section/topic/WORLD?hl=en-GB&gl=GB&ceid=GB:en",
+        "https://news.google.com/rss/search?q=site:reuters.com/world&hl=en-GB&gl=GB&ceid=GB:en",
     ],
     "business": [
         "https://feeds.bbci.co.uk/news/business/rss.xml",
         "https://feeds.skynews.com/feeds/rss/business.xml",
+        "https://www.theguardian.com/business/rss",
+        "https://feeds.npr.org/1006/rss.xml",
+        "https://www.france24.com/en/business-tech/rss",
+        "https://news.google.com/rss/headlines/section/topic/BUSINESS?hl=en-GB&gl=GB&ceid=GB:en",
+        "https://news.google.com/rss/search?q=site:reuters.com/business&hl=en-GB&gl=GB&ceid=GB:en",
+        "https://news.google.com/rss/search?q=site:ft.com&hl=en-GB&gl=GB&ceid=GB:en",
     ],
     "technology": [
         "https://feeds.bbci.co.uk/news/technology/rss.xml",
         "https://feeds.skynews.com/feeds/rss/technology.xml",
+        "https://www.theguardian.com/uk/technology/rss",
+        "https://feeds.npr.org/1019/rss.xml",
+        "https://www.france24.com/en/business-tech/rss",
+        "https://news.google.com/rss/headlines/section/topic/TECHNOLOGY?hl=en-GB&gl=GB&ceid=GB:en",
+        "https://news.google.com/rss/search?q=site:reuters.com/technology&hl=en-GB&gl=GB&ceid=GB:en",
     ],
     "science": [
         "https://feeds.bbci.co.uk/news/science_and_environment/rss.xml",
+        "https://www.theguardian.com/science/rss",
+        "https://feeds.npr.org/1007/rss.xml",
+        "https://www.france24.com/en/tag/science/rss",
+        "https://news.google.com/rss/headlines/section/topic/SCIENCE?hl=en-GB&gl=GB&ceid=GB:en",
     ],
     "sport": [
         "https://feeds.bbci.co.uk/sport/rss.xml",
         "https://feeds.skynews.com/feeds/rss/sport.xml",
+        "https://www.theguardian.com/uk/sport/rss",
+        "https://feeds.npr.org/1055/rss.xml",
+        "https://news.google.com/rss/headlines/section/topic/SPORTS?hl=en-GB&gl=GB&ceid=GB:en",
     ],
 }
 
@@ -74,7 +119,7 @@ _SESSION.headers.update({
 
 def _scrape_media(url: str) -> dict:
     """Fetch a page and extract og:image / og:video meta tags."""
-    result = {"image": None, "video": None, "type": None}
+    result = {"image": None, "video": None, "type": None, "url": url}
     try:
         resp = _SESSION.get(
             url, timeout=8, allow_redirects=True, stream=True,
@@ -84,6 +129,7 @@ def _scrape_media(url: str) -> dict:
             logger.info("Media scrape %d for %s", resp.status_code, url[:80])
             resp.close()
             return result
+        result["url"] = resp.url
 
         chunks, size = [], 0
         for chunk in resp.iter_content(chunk_size=8192):
@@ -153,6 +199,9 @@ def _resolve_article(article: dict) -> dict:
 
     media = _scrape_media(url)
     _article_cache[url] = (now, media)
+    article["link"] = media.get("url") or article["link"]
+    if "news.google.com" in article["link"] or "consent.google.com" in article["link"]:
+        article["_drop"] = True
     article["image"] = media["image"]
     article["video"] = media["video"]
     article["media_type"] = media["type"]
@@ -168,6 +217,8 @@ def _parse_entry(entry) -> dict:
         *parts, source = raw_title.rsplit(" - ", 1)
         title = " - ".join(parts).strip()
         source = source.strip()
+    if not source:
+        source = entry.get("feed_source", "")
 
     link = entry.get("link", "#")
 
@@ -214,8 +265,53 @@ def _parse_entry(entry) -> dict:
         "image": image,
         "video": video,
         "media_type": media_type,
-        "_needs_resolve": image is None and video is None,
+        "_needs_resolve": image is None and video is None or "news.google.com" in link,
     }
+
+
+def _entry_timestamp(entry) -> float:
+    try:
+        return parsedate_to_datetime(entry.get("published", "")).timestamp()
+    except Exception:
+        return 0
+
+
+def _source_key(article: dict) -> str:
+    text = f"{article.get('source', '')} {article.get('link', '')}".lower()
+    for name in ("bbc", "sky", "aljazeera", "guardian", "npr", "france24", "dw.com", "washingtonpost", "reuters", "ft.com", "c-span"):
+        if name in text:
+            return name
+    return article.get("source", "other") or "other"
+
+
+def _rank_article(article: dict) -> float:
+    source = _source_key(article)
+    boosts = {
+        "aljazeera": 7200,
+        "reuters": 5400,
+        "guardian": 3600,
+        "france24": 3000,
+        "npr": 2400,
+        "dw.com": 1800,
+        "washingtonpost": 1800,
+        "bbc": -3600,
+    }
+    return article.get("timestamp", 0) + boosts.get(source, 0)
+
+
+def _fetch_entries_from_url(url: str, per_feed_limit: int) -> list:
+    logger.info("Fetching feed: %s", url)
+    try:
+        feed = feedparser.parse(url)
+    except Exception as exc:
+        logger.info("Feed failed %s: %s", url, exc)
+        return []
+    feed_source = feed.feed.get("title", "")
+    entries = []
+    for e in feed.entries[:per_feed_limit]:
+        e["feed_source"] = feed_source
+        entries.append(e)
+    return entries
 
 
 def fetch_feed(category: str) -> list:
@@ -232,29 +328,52 @@ def fetch_feed(category: str) -> list:
 
     all_entries = []
     seen_titles = set()
-    for url in urls:
-        logger.info("Fetching feed: %s", url)
-        feed = feedparser.parse(url)
-        for e in feed.entries:
-            title = e.get("title", "")
-            key = title[:60].lower()
-            if key not in seen_titles:
-                seen_titles.add(key)
-                all_entries.append(e)
+    per_feed_limit = 8 if len(urls) > 3 else 12
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        feed_results = pool.map(lambda u: _fetch_entries_from_url(u, per_feed_limit), urls)
+        for entries in feed_results:
+            for e in entries:
+                title = e.get("title", "")
+                key = title[:60].lower()
+                if key not in seen_titles:
+                    seen_titles.add(key)
+                    all_entries.append(e)
 
     if not all_entries:
         raise RuntimeError(f"No entries found for '{category}'")
 
-    articles = [_parse_entry(e) for e in all_entries[:30]]
-
-    with ThreadPoolExecutor(max_workers=12) as pool:
-        articles = list(pool.map(_resolve_article, articles))
+    all_entries.sort(key=_entry_timestamp, reverse=True)
+    articles = [_parse_entry(e) for e in all_entries[:60]]
+    articles.sort(key=_rank_article, reverse=True)
+    counts = {}
+    balanced = []
+    for a in articles:
+        source = _source_key(a)
+        limit = 4 if source == "bbc" else 6
+        if counts.get(source, 0) >= limit:
+            continue
+        counts[source] = counts.get(source, 0) + 1
+        balanced.append(a)
+    articles = balanced[:30]
 
     for a in articles:
-        a.pop("_needs_resolve", None)
+        a.pop("_drop", None)
 
     _cache[category] = (now, articles)
     return articles
+
+
+def resolve_media_batch(articles: list) -> list:
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        resolved = list(pool.map(_resolve_article, articles))
+    clean = []
+    for a in resolved:
+        if a.get("_drop"):
+            continue
+        a.pop("_needs_resolve", None)
+        a.pop("_drop", None)
+        clean.append(a)
+    return clean
 
 
 
@@ -282,6 +401,19 @@ def api_news():
         return jsonify({"error": str(exc)}), 500
 
 
+@app.route("/api/media", methods=["POST"])
+def api_media():
+    payload = request.get_json(silent=True) or {}
+    articles = payload.get("articles", [])
+    if not isinstance(articles, list):
+        return jsonify({"error": "articles must be a list"}), 400
+    try:
+        return jsonify({"articles": resolve_media_batch(articles[:30])})
+    except Exception as exc:
+        logger.error("Error resolving media: %s", exc)
+        return jsonify({"error": str(exc)}), 500
+
+
 @app.route("/api/status")
 def api_status():
     return jsonify({
@@ -300,11 +432,12 @@ def image_proxy():
     Usage: /api/proxy?url=https://...
     """
     url = request.args.get("url", "").strip()
+    thumb = request.args.get("thumb") == "1"
     if not url or not url.startswith(("http://", "https://")):
         return "", 400
 
     now = time.time()
-    cache_key = f"proxy:{url}"
+    cache_key = f"proxy:{'thumb:' if thumb else ''}{url}"
     hit = _article_cache.get(cache_key)
     if hit and isinstance(hit, tuple) and len(hit) == 3:
         cached_at, content_type, data = hit
@@ -319,6 +452,16 @@ def image_proxy():
             return "", r.status_code
         content_type = r.headers.get("Content-Type", "image/jpeg")
         data = r.content
+        if thumb and Image and content_type.startswith("image/"):
+            try:
+                img = Image.open(BytesIO(data))
+                img.thumbnail((480, 270))
+                out = BytesIO()
+                img.convert("RGB").save(out, format="JPEG", quality=55, optimize=True)
+                data = out.getvalue()
+                content_type = "image/jpeg"
+            except Exception as exc:
+                logger.debug("Thumbnail failed for %s: %s", url, exc)
         _article_cache[cache_key] = (now, content_type, data)
         return Response(data, content_type=content_type)
     except Exception as exc:
@@ -327,8 +470,4 @@ def image_proxy():
 
 
 if __name__ == "__main__":
-<<<<<<< HEAD
     app.run(host="0.0.0.0", port=5000, debug=False, threaded=True)
-=======
-    app.run(host="0.0.0.0", port=4000, debug=False, threaded=True)
->>>>>>> master
