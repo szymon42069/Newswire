@@ -1,14 +1,8 @@
-/* =========================================================
-   THE BRIEFING — main stylesheet
-   A personal news dashboard, built from scratch.
-   
-   Palette: near-black bg, warm off-white text, amber accent
-   Fonts: Fraunces (display) + Lora (body)
-   ========================================================= */
+
 
 @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,600;0,9..144,700;1,9..144,300;1,9..144,600&family=Lora:ital,wght@0,400;0,500;1,400&family=JetBrains+Mono:wght@400;500&display=swap');
 
-/* --- Custom properties ----------------------------------- */
+
 :root {
   --bg:          #0b0b0e;
   --bg-card:     #111116;
@@ -35,7 +29,7 @@
   --transition-slow: 500ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
-/* --- Reset & base ---------------------------------------- */
+
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
@@ -56,7 +50,7 @@ body {
   line-height: 1.65;
   min-height: 100vh;
 
-  /* subtle noise grain over the background */
+  
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
 }
 
@@ -65,9 +59,7 @@ a {
   text-decoration: none;
 }
 
-/* =========================================================
-   HEADER
-   ========================================================= */
+
 
 .site-header {
   position: sticky;
@@ -117,7 +109,7 @@ a {
   text-transform: uppercase;
 }
 
-/* Header right: date + search toggle */
+
 .header-right {
   display: flex;
   align-items: center;
@@ -171,9 +163,7 @@ a {
   stroke-width: 1.8;
 }
 
-/* =========================================================
-   CATEGORY NAV
-   ========================================================= */
+
 
 .category-nav {
   padding: 0 clamp(16px, 4vw, 48px);
@@ -216,9 +206,7 @@ a {
   border-bottom-color: var(--accent);
 }
 
-/* =========================================================
-   SEARCH OVERLAY
-   ========================================================= */
+
 
 .search-overlay {
   position: fixed;
@@ -273,9 +261,7 @@ a {
   text-align: center;
 }
 
-/* =========================================================
-   MAIN CONTENT AREA
-   ========================================================= */
+
 
 .main {
   padding: clamp(24px, 4vw, 48px) clamp(16px, 4vw, 48px);
@@ -283,7 +269,7 @@ a {
   margin: 0 auto;
 }
 
-/* Content panel — used for animated transitions */
+
 .content-panel {
   animation: fadeIn var(--transition-slow) both;
 }
@@ -293,9 +279,7 @@ a {
   to   { opacity: 1; transform: translateY(0); }
 }
 
-/* =========================================================
-   HERO ARTICLE (featured / first result)
-   ========================================================= */
+
 
 .hero {
   display: grid;
@@ -433,9 +417,7 @@ a {
 .read-link:hover { gap: 10px; }
 .read-link svg { width: 14px; height: 14px; }
 
-/* =========================================================
-   SECTION HEADER (above the grid)
-   ========================================================= */
+
 
 .section-header {
   display: flex;
@@ -462,9 +444,7 @@ a {
   letter-spacing: 0.1em;
 }
 
-/* =========================================================
-   ARTICLE GRID
-   ========================================================= */
+
 
 .article-grid {
   display: grid;
@@ -472,9 +452,7 @@ a {
   gap: 20px;
 }
 
-/* =========================================================
-   ARTICLE CARD
-   ========================================================= */
+
 
 .card {
   background: var(--bg-card);
@@ -488,7 +466,7 @@ a {
     border-color var(--transition-med),
     box-shadow var(--transition-med);
 
-  /* staggered reveal animation applied via JS */
+  
   opacity: 0;
   transform: translateY(16px);
 }
@@ -643,9 +621,7 @@ a {
   to { opacity: 1; filter: brightness(.9) saturate(.95); }
 }
 
-/* =========================================================
-   LOADING STATE
-   ========================================================= */
+
 
 .loading-state {
   display: flex;
@@ -760,9 +736,7 @@ a {
   border-color: var(--accent);
 }
 
-/* =========================================================
-   ERROR STATE
-   ========================================================= */
+
 
 .error-state {
   text-align: center;
@@ -785,9 +759,7 @@ a {
   letter-spacing: 0.08em;
 }
 
-/* =========================================================
-   FOOTER
-   ========================================================= */
+
 
 .site-footer {
   margin-top: 64px;
@@ -849,9 +821,7 @@ a {
   color: #ffffff;
 }
 
-/* =========================================================
-   TRANSITIONS — category switch
-   ========================================================= */
+
 
 .content-panel.leaving {
   animation: panelLeave 220ms ease forwards;
@@ -870,18 +840,14 @@ a {
   to   { opacity: 1; transform: translateY(0); }
 }
 
-/* =========================================================
-   SCROLLBAR
-   ========================================================= */
+
 
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: var(--bg); }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
 
-/* =========================================================
-   RESPONSIVE
-   ========================================================= */
+
 
 @media (max-width: 1000px) {
   .article-grid {
@@ -916,9 +882,7 @@ a {
   .logo-name { font-size: 1.1rem; }
 }
 
-/* =========================================================
-   REFRESH BUTTON
-   ========================================================= */
+
 
 .btn-refresh {
   font-family: var(--font-mono);
@@ -951,9 +915,7 @@ a {
   height: 11px;
 }
 
-/* =========================================================
-   "NO RESULTS" when search finds nothing
-   ========================================================= */
+
 
 .no-results {
   grid-column: 1 / -1;
@@ -965,11 +927,9 @@ a {
   color: var(--text-muted);
 }
 
-/* =========================================================
-   THEMES, BG ANIMATIONS, PIN FIELD, LIGHTBOX — clean block
-   ========================================================= */
 
-/* ---- Theme variants ---- */
+
+
 :root[data-theme="light"] {
   --bg: #f6f1e6; --bg-card: #ffffff; --bg-hover: #ece5d3;
   --border: #d6cdb8; --border-soft: #e3dac4;
@@ -994,7 +954,7 @@ body, .site-header, .site-footer, .hero, .card,
 }
 .site-header { background: color-mix(in srgb, var(--bg) 88%, transparent); }
 
-/* ---- Theme toggle button ---- */
+
 .btn-theme { position: relative; overflow: hidden; }
 .btn-theme svg {
   position: absolute; top: 50%; left: 50%;
@@ -1014,7 +974,7 @@ body, .site-header, .site-footer, .hero, .card,
   ::view-transition-new(root) { z-index: 2; }
 }
 
-/* ---- Background layer ---- */
+
 .bg-anim { position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 0; }
 .site-header, main, .site-footer, .search-overlay { position: relative; z-index: 2; }
 .site-header { z-index: 100; }
@@ -1034,7 +994,7 @@ body, .site-header, .site-footer, .hero, .card,
   66%      { transform: translate(-50px,40px) scale(.95); }
 }
 
-/* ---- Sky gradient on the bg-anim layer (blue theme) ---- */
+
 :root[data-theme="blue"] .bg-anim {
   background: linear-gradient(180deg,
     #061b46 0%, #0f3a85 22%, #1f63bd 48%,
@@ -1043,7 +1003,7 @@ body, .site-header, .site-footer, .hero, .card,
 :root[data-theme="blue"] body { background-image: none; }
 :root[data-theme="blue"] .bg-orb { opacity: .35; }
 
-/* ---- Clouds (8 unique silhouettes; only animate in blue) ---- */
+
 .cloud { position: absolute; pointer-events: none; opacity: 0; transition: opacity 1s ease; }
 :root[data-theme="blue"] .cloud { opacity: 1; }
 
@@ -1099,7 +1059,7 @@ body, .site-header, .site-footer, .hero, .card,
 :root[data-theme="blue"] .cloud-8 { animation: drift  72s linear  -15s infinite; }
 @keyframes drift { from { left: -300px; } to { left: 110%; } }
 
-/* ---- Wave canvas (light theme only) ---- */
+
 .block-field {
   position: fixed; left: 0; right: 0; bottom: 0;
   height: 320px;
@@ -1113,11 +1073,11 @@ body, .site-header, .site-footer, .hero, .card,
   width: 100%; height: 100%;
   display: block;
 }
-/* Hide old pin/block divs */
+
 .pin { display: none !important; }
 .block { display: none !important; }
 
-/* ---- Cards: glassmorphism + theme-aware tint ---- */
+
 .hero, .card {
   -webkit-backdrop-filter: blur(12px) saturate(120%);
           backdrop-filter: blur(12px) saturate(120%);
@@ -1139,7 +1099,7 @@ body, .site-header, .site-footer, .hero, .card,
   border-color: rgba(255,255,255,.14);
 }
 
-/* ---- Lightbox ---- */
+
 .lightbox {
   position: fixed; inset: 0; z-index: 2000;
   background: rgba(0,0,0,.92);
@@ -1171,17 +1131,14 @@ body, .site-header, .site-footer, .hero, .card,
 .hero-image img, .card-image img, img.article-media { cursor: zoom-in; }
 .hero-image video, .card-image video { cursor: pointer; }
 
-/* ---- A11y / perf ---- */
+
 @media (prefers-reduced-motion: reduce) {
   .pin, .cloud, .bg-orb { animation: none !important; }
 }
 
-/* =========================================================
-   ADDITIONS — themes, animated bg, water-ripple pins,
-   glass cards, image lightbox.
-   ========================================================= */
 
-/* ---- Theme variants -------------------------------------- */
+
+
 :root[data-theme="light"] {
   --bg: #f6f1e6; --bg-card: #fff; --bg-hover: #ece5d3;
   --border: #d6cdb8; --border-soft: #e3dac4;
@@ -1207,7 +1164,7 @@ body, .site-header, .site-footer, .hero, .card,
 }
 .site-header { background: color-mix(in srgb, var(--bg) 88%, transparent); }
 
-/* ---- Animated background layer --------------------------- */
+
 .bg-anim {
   position: fixed; inset: 0;
   pointer-events: none;
@@ -1217,7 +1174,7 @@ body, .site-header, .site-footer, .hero, .card,
 .site-header, main, .site-footer, .search-overlay { position: relative; z-index: 2; }
 .site-header { z-index: 100; }
 
-/* Sky gradient — only blue theme */
+
 :root[data-theme="blue"] .bg-anim {
   background: linear-gradient(180deg,
     #061b46 0%, #0f3a85 22%, #1f63bd 48%,
@@ -1225,7 +1182,7 @@ body, .site-header, .site-footer, .hero, .card,
 }
 :root[data-theme="blue"] body { background-image: none; }
 
-/* Floating orbs */
+
 .bg-orb {
   position: absolute;
   border-radius: 50%;
@@ -1242,7 +1199,7 @@ body, .site-header, .site-footer, .hero, .card,
   66%     { transform: translate(-50px,40px) scale(.95); }
 }
 
-/* Clouds — unique shapes, only animate in blue theme */
+
 .cloud { position: absolute; pointer-events: none; opacity: 0; transition: opacity 1s ease; }
 :root[data-theme="blue"] .cloud { opacity: 1; }
 :root[data-theme="blue"] .bg-orb { opacity: .4; }
@@ -1301,9 +1258,9 @@ body, .site-header, .site-footer, .hero, .card,
 :root[data-theme="blue"] .cloud-8 { animation: drift 72s linear -15s infinite; }
 @keyframes drift { from { left: -300px; } to { left: 110%; } }
 
-/* ---- Wave canvas (light theme only) — duplicate block removed, see above ---- */
 
-/* ---- Theme toggle button -------------------------------- */
+
+
 .btn-theme { position: relative; overflow: hidden; }
 .btn-theme svg {
   position: absolute; top: 50%; left: 50%;
@@ -1320,7 +1277,7 @@ body, .site-header, .site-footer, .hero, .card,
   ::view-transition-new(root) { z-index: 2; }
 }
 
-/* ---- Glass cards ---------------------------------------- */
+
 .hero, .card {
   background: color-mix(in srgb, var(--bg-card) 70%, transparent);
   -webkit-backdrop-filter: blur(12px) saturate(120%);
@@ -1343,7 +1300,7 @@ body, .site-header, .site-footer, .hero, .card,
   border-color: rgba(255,255,255,.10);
 }
 
-/* ---- Lightbox ------------------------------------------- */
+
 .lightbox {
   position: fixed; inset: 0; z-index: 2000;
   background: rgba(0,0,0,.92);
@@ -1379,7 +1336,7 @@ body, .site-header, .site-footer, .hero, .card,
   .pin, .cloud, .bg-orb { animation: none !important; }
 }
 
-/* Final blue-theme polish: real cloud blobs, no rectangular artifacts. */
+
 :root[data-theme="blue"] .block-field,
 :root[data-theme="blue"] .block-field canvas {
   display: none !important;

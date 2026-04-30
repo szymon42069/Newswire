@@ -8,14 +8,14 @@
 
   <title>The Newswire</title>
 
-  <!-- Favicon — inline SVG data URI -->
+  
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='4' fill='%230b0b0e'/><text x='16' y='23' font-size='18' text-anchor='middle' fill='%23c17f24' font-family='Georgia,serif' font-weight='bold'>N</text></svg>" />
 
   <link rel="stylesheet" href="/static/style.css" />
 </head>
 <body>
 
-  <!-- Animated background layer (moves behind content) -->
+  
   <div class="bg-anim" aria-hidden="true">
     <div class="bg-orb"></div>
     <div class="bg-orb"></div>
@@ -31,7 +31,7 @@
     <div class="block-field" id="block-field" aria-hidden="true"></div>
   </div>
 
-  <!-- Image lightbox -->
+  
   <div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-hidden="true">
     <img id="lightbox-img" alt="" />
     <button class="lightbox-close" id="lightbox-close" aria-label="Close image">
@@ -39,26 +39,24 @@
     </button>
   </div>
 
-  <!-- =====================================================
-       HEADER
-       ===================================================== -->
+  
   <header class="site-header">
     <div class="header-top">
 
-      <!-- Logo -->
+      
       <div class="logo" aria-label="The Newswire">
         <span class="logo-name">The <span>Newswire</span></span>
         <span class="logo-tagline">Live news dashboard</span>
       </div>
 
-      <!-- Right controls -->
+      
       <div class="header-right">
         <span class="live-date" id="live-date" aria-live="polite">
           <span class="live-dot" aria-hidden="true"></span>
           loading…
         </span>
 
-        <!-- Refresh -->
+        
         <button class="btn-refresh" id="btn-refresh" aria-label="Refresh articles">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
             <polyline points="1 4 1 10 7 10"/>
@@ -67,7 +65,7 @@
           Refresh
         </button>
 
-        <!-- Search toggle -->
+        
         <button class="btn-icon" id="btn-search" aria-label="Search articles (Ctrl+K)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
             <circle cx="11" cy="11" r="7"/>
@@ -75,7 +73,7 @@
           </svg>
         </button>
 
-        <!-- Theme toggle (dark / light / blue) -->
+        
         <button class="btn-icon btn-theme" id="btn-theme" aria-label="Change theme" title="Change theme">
           <svg data-theme-icon="dark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
             <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>
@@ -92,7 +90,7 @@
 
     </div>
 
-    <!-- Category navigation -->
+    
     <nav class="category-nav" aria-label="News categories">
       <ul class="nav-list" role="list">
         <li class="nav-item" role="listitem">
@@ -120,9 +118,7 @@
     </nav>
   </header>
 
-  <!-- =====================================================
-       SEARCH OVERLAY
-       ===================================================== -->
+  
   <div class="search-overlay" id="search-overlay" role="dialog" aria-modal="true" aria-label="Search articles">
     <div class="search-box">
       <input
@@ -143,20 +139,16 @@
     </button>
   </div>
 
-  <!-- =====================================================
-       MAIN CONTENT
-       ===================================================== -->
+  
   <main class="main" id="content-area" aria-live="polite" aria-atomic="false">
-    <!-- Populated by app.js -->
+    
     <div class="loading-state">
       <div class="loading-spinner"></div>
       <p class="loading-text">Fetching latest stories…</p>
     </div>
   </main>
 
-  <!-- =====================================================
-       FOOTER
-       ===================================================== -->
+  
   <footer class="site-footer">
     <span class="footer-left">The Newswire &nbsp;·&nbsp; Powered by Google News RSS</span>
     <span class="footer-right">

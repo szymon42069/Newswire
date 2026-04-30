@@ -1,17 +1,9 @@
-/* =============================================================
-   Newswire — app.js
-   Handles: data fetching, rendering, category switching,
-            search, live clock, staggered card reveals.
-   ============================================================= */
+
 
 (function () {
   "use strict";
 
-  /* ----------------------------------------------------------
-     Global image-error handler — called via onerror="imgError(this)"
-     Replaces the broken <img> (or its parent wrapper) with a
-     placeholder div so we never get a broken-image icon.
-  ---------------------------------------------------------- */
+  
   window.imgError = function (img) {
     const placeholder = document.createElement("div");
     placeholder.className = "img-placeholder";
@@ -19,9 +11,7 @@
     img.replaceWith(placeholder);
   };
 
-  /* Route all images/videos through the server proxy.
-     This lets our server fetch with proper browser-like headers so
-     hotlink-blocking news site CDNs don't 403 the browser directly. */
+  
   function proxyImg(url) {
     if (!url) return null;
     return `/api/proxy?url=${encodeURIComponent(url)}`;
@@ -512,10 +502,7 @@
   }
 })();
 
-/* =========================================================
-   THEME TOGGLE — dark → light → blue, with a circular
-   reveal that expands from the button.
-   ========================================================= */
+
 (function () {
   const THEMES = ['dark', 'light', 'blue'];
   const KEY = 'newswire-theme';
@@ -568,9 +555,7 @@
   });
 })();
 
-/* =========================================================
-   IMAGE LIGHTBOX — click any article image to enlarge.
-   ========================================================= */
+
 (function () {
   const lb      = document.getElementById('lightbox');
   const lbImg   = document.getElementById('lightbox-img');
@@ -604,10 +589,7 @@
   });
 })();
 
-/* =========================================================
-   WAVE CANVAS — smooth orange ripple sine wave (light theme).
-   Uses requestAnimationFrame + canvas for a real wave shape.
-   ========================================================= */
+
 (function () {
   const field = document.getElementById('block-field');
   if (!field) return;
@@ -630,7 +612,6 @@
 
     const theme = document.documentElement.getAttribute('data-theme');
     if (theme === 'light') {
-      // Three layered sine waves, each filled down to bottom
       const layers = [
         { amp: 28, freq: 0.016, speed: 1.0, yBase: H * 0.52, colors: ['rgba(255,160,60,0.85)', 'rgba(184,81,0,0.9)'] },
         { amp: 18, freq: 0.024, speed: 1.4, yBase: H * 0.65, colors: ['rgba(255,200,100,0.6)', 'rgba(220,110,0,0.7)'] },
@@ -655,8 +636,6 @@
         ctx.fillStyle = grad;
         ctx.fill();
       });
-
-      // Soft glow overlay at the bottom center
       const glow = ctx.createRadialGradient(W/2, H, 0, W/2, H, W * 0.55);
       glow.addColorStop(0, 'rgba(255,140,40,0.18)');
       glow.addColorStop(1, 'transparent');

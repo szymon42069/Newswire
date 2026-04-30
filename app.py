@@ -103,10 +103,10 @@ RSS_FEEDS = {
 
 
 _cache: dict = {}
-CACHE_TTL = 300  # 5 minutes
+CACHE_TTL = 300
 
 _article_cache: dict = {}
-ARTICLE_CACHE_TTL = 3600  # 1 hour
+ARTICLE_CACHE_TTL = 3600
 
 
 def _strip_html(raw: str) -> str:
@@ -128,7 +128,6 @@ _SESSION.headers.update({
 
 
 def _scrape_media(url: str) -> dict:
-    """Fetch a page and extract og:image / og:video meta tags."""
     result = {"image": None, "video": None, "type": None, "url": url}
     try:
         resp = _SESSION.get(
@@ -212,7 +211,6 @@ def _scrape_media(url: str) -> dict:
 
 
 def _resolve_article(article: dict) -> dict:
-    """Scrape og:image / og:video from the article page if the RSS had none."""
     if not article.get("_needs_resolve", False):
         return article
 
@@ -466,12 +464,6 @@ def api_status():
 
 @app.route("/api/proxy")
 def image_proxy():
-    """
-    Proxy images/videos through the server so hotlink-blocking news sites
-    don't 403 the browser.  The server request carries browser-like headers
-    and the right Referer so most CDNs let it through.
-    Usage: /api/proxy?url=https://...
-    """
     url = request.args.get("url", "").strip()
     thumb = request.args.get("thumb") == "1"
     if not url or not url.startswith(("http://", "https://")):
