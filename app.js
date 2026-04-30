@@ -16,11 +16,25 @@
     const placeholder = document.createElement("div");
     placeholder.className = "img-placeholder";
     placeholder.innerHTML = placeholderSvg();
+<<<<<<< HEAD
     // If the img is the only child of a wrapper div (hero-image, card-image)
     // replace just the img; keep the wrapper intact.
     img.replaceWith(placeholder);
   };
 
+=======
+    img.replaceWith(placeholder);
+  };
+
+  /* Route all images/videos through the server proxy.
+     This lets our server fetch with proper browser-like headers so
+     hotlink-blocking news site CDNs don't 403 the browser directly. */
+  function proxyImg(url) {
+    if (!url) return null;
+    return `/api/proxy?url=${encodeURIComponent(url)}`;
+  }
+
+>>>>>>> master
 
   const state = {
     currentCategory: "top",
@@ -80,7 +94,11 @@
   }
 
   function placeholderSvg() {
+<<<<<<< HEAD
     return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+=======
+    return `<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="opacity:.12">
+>>>>>>> master
       <rect x="3" y="3" width="18" height="18" rx="2"/>
       <path d="M3 9l4-4 4 4 4-6 4 6"/>
       <circle cx="8.5" cy="13.5" r="1.5"/>
@@ -91,7 +109,11 @@
 
   function renderHero(article) {
     const imageHtml = article.image
+<<<<<<< HEAD
       ? `<img src="${escapeHtml(article.image)}" alt="" loading="eager" onerror="imgError(this)"/>`
+=======
+      ? `<img src="${escapeHtml(proxyImg(article.image))}" alt="" loading="eager" referrerpolicy="no-referrer" onerror="imgError(this)"/>`
+>>>>>>> master
       : `<div class="img-placeholder">${placeholderSvg()}</div>`;
 
     return `
@@ -121,11 +143,15 @@
       </article>`;
   }
   function renderMedia(article) {
+<<<<<<< HEAD
   
+=======
+>>>>>>> master
   if (article.video) {
     return `
       <video
         class="article-media"
+<<<<<<< HEAD
         src="${article.video}"
         autoplay
         muted
@@ -148,12 +174,31 @@
         onerror="imgError(this)"
       />
     `;
+=======
+        src="${escapeHtml(proxyImg(article.video))}"
+        autoplay muted loop playsinline preload="metadata"
+        onerror="imgError(this)"
+      ></video>`;
+  }
+  if (article.image) {
+    return `
+      <img
+        class="article-media"
+        src="${escapeHtml(proxyImg(article.image))}"
+        alt="" loading="lazy"
+        onerror="imgError(this)"
+      />`;
+>>>>>>> master
   }
   return `<div class="article-media placeholder"></div>`;
 }
   function renderCard(article, index) {
     const imageHtml = article.image
+<<<<<<< HEAD
       ? `<img src="${escapeHtml(article.image)}" alt="" loading="lazy" onerror="imgError(this)"/>`
+=======
+      ? `<img src="${escapeHtml(proxyImg(article.image))}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="imgError(this)"/>`
+>>>>>>> master
       : `<div class="img-placeholder">${placeholderSvg()}</div>`;
 
     return `
@@ -404,3 +449,120 @@
     init();
   }
 })();
+<<<<<<< HEAD
+=======
+
+/* =========================================================
+   THEME TOGGLE — dark → light → blue, with a circular
+   reveal that expands from the button.
+   ========================================================= */
+(function () {
+  const THEMES = ['dark', 'light', 'blue'];
+  const KEY = 'newswire-theme';
+  const root = document.documentElement;
+  const btn = document.getElementById('btn-theme');
+  if (!btn) return;
+
+  function setIcon(name) {
+    btn.querySelectorAll('svg').forEach(s => s.classList.remove('active'));
+    const icon = btn.querySelector('[data-theme-icon="' + name + '"]');
+    if (icon) icon.classList.add('active');
+  }
+  function applyTheme(name) {
+    if (name === 'dark') root.removeAttribute('data-theme');
+    else root.setAttribute('data-theme', name);
+    setIcon(name);
+    try { localStorage.setItem(KEY, name); } catch (_) {}
+  }
+  let saved = 'dark';
+  try { saved = localStorage.getItem(KEY) || 'dark'; } catch (_) {}
+  applyTheme(saved);
+
+  btn.addEventListener('click', () => {
+    let current = 'dark';
+    try { current = localStorage.getItem(KEY) || 'dark'; } catch (_) {}
+    const next = THEMES[(THEMES.indexOf(current) + 1) % THEMES.length];
+
+    const r = btn.getBoundingClientRect();
+    const x = r.left + r.width / 2;
+    const y = r.top + r.height / 2;
+    const endR = Math.hypot(
+      Math.max(x, window.innerWidth - x),
+      Math.max(y, window.innerHeight - y)
+    );
+
+    if (!document.startViewTransition) { applyTheme(next); return; }
+    const t = document.startViewTransition(() => applyTheme(next));
+    t.ready.then(() => {
+      document.documentElement.animate({
+        clipPath: [
+          'circle(0px at ' + x + 'px ' + y + 'px)',
+          'circle(' + endR + 'px at ' + x + 'px ' + y + 'px)'
+        ]
+      }, {
+        duration: 600,
+        easing: 'cubic-bezier(0.4, 0, 0.2, 1)',
+        pseudoElement: '::view-transition-new(root)'
+      });
+    }).catch(() => {});
+  });
+})();
+
+/* =========================================================
+   IMAGE LIGHTBOX — click any article image to enlarge.
+   ========================================================= */
+(function () {
+  const lb      = document.getElementById('lightbox');
+  const lbImg   = document.getElementById('lightbox-img');
+  const lbClose = document.getElementById('lightbox-close');
+  if (!lb || !lbImg || !lbClose) return;
+
+  function open(src) {
+    lbImg.src = src;
+    lb.classList.add('open');
+    lb.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+  }
+  function close() {
+    lb.classList.remove('open');
+    lb.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+    setTimeout(() => { if (!lb.classList.contains('open')) lbImg.src = ''; }, 300);
+  }
+  document.addEventListener('click', (e) => {
+    const img = e.target.closest('.hero-image img, .card-image img, img.article-media');
+    if (!img) return;
+    e.preventDefault();
+    e.stopPropagation();
+    open(img.currentSrc || img.src);
+  });
+  lb.addEventListener('click', (e) => {
+    if (e.target === lb || e.target.closest('#lightbox-close')) close();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && lb.classList.contains('open')) close();
+  });
+})();
+
+/* =========================================================
+   PIN FIELD — traveling sine wave left → right.
+   Each pin gets an animation-delay offset so the CSS
+   pin-wave keyframe fires in sequence across the row.
+   ========================================================= */
+(function () {
+  const field = document.getElementById('block-field');
+  if (!field || field.childElementCount) return;
+  const COUNT  = 50;
+  const PERIOD = 1.8;   // seconds — must match CSS animation-duration
+  const frag = document.createDocumentFragment();
+  for (let i = 0; i < COUNT; i++) {
+    const pin = document.createElement('div');
+    pin.className = 'pin';
+    // negative delay = pin starts part-way through its cycle already
+    // stagger = one full period spread evenly across all pins
+    pin.style.animationDelay = `${(-(i / COUNT) * PERIOD).toFixed(3)}s`;
+    frag.appendChild(pin);
+  }
+  field.appendChild(frag);
+})();
+>>>>>>> master

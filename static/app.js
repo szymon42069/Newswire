@@ -399,4 +399,167 @@
   } else {
     init();
   }
+<<<<<<< HEAD
 })();
+=======
+})();
+
+/* =========================================================
+   THEME TOGGLE — dark → light → blue, with a circular
+   reveal that expands from the button.
+   ========================================================= */
+(function () {
+  const THEMES = ['dark', 'light', 'blue'];
+  const KEY = 'newswire-theme';
+  const root = document.documentElement;
+  const btn = document.getElementById('btn-theme');
+  if (!btn) return;
+
+  function setIcon(name) {
+    btn.querySelectorAll('svg').forEach(s => s.classList.remove('active'));
+    const icon = btn.querySelector('[data-theme-icon="' + name + '"]');
+    if (icon) icon.classList.add('active');
+  }
+  function applyTheme(name) {
+    if (name === 'dark') root.removeAttribute('data-theme');
+    else root.setAttribute('data-theme', name);
+    setIcon(name);
+    try { localStorage.setItem(KEY, name); } catch (_) {}
+  }
+  let saved = 'dark';
+  try { saved = localStorage.getItem(KEY) || 'dark'; } catch (_) {}
+  applyTheme(saved);
+
+  btn.addEventListener('click', () => {
+    let current = 'dark';
+    try { current = localStorage.getItem(KEY) || 'dark'; } catch (_) {}
+    const next = THEMES[(THEMES.indexOf(current) + 1) % THEMES.length];
+
+    const r = btn.getBoundingClientRect();
+    const x = r.left + r.width / 2;
+    const y = r.top + r.height / 2;
+    const endR = Math.hypot(
+      Math.max(x, window.innerWidth - x),
+      Math.max(y, window.innerHeight - y)
+    );
+
+    if (!document.startViewTransition) { applyTheme(next); return; }
+    const t = document.startViewTransition(() => applyTheme(next));
+    t.ready.then(() => {
+      document.documentElement.animate({
+        clipPath: [
+          'circle(0px at ' + x + 'px ' + y + 'px)',
+          'circle(' + endR + 'px at ' + x + 'px ' + y + 'px)'
+        ]
+      }, {
+        duration: 600,
+        easing: 'cubic-bezier(0.4, 0, 0.2, 1)',
+        pseudoElement: '::view-transition-new(root)'
+      });
+    }).catch(() => {});
+  });
+})();
+
+/* =========================================================
+   IMAGE LIGHTBOX — click any article image to enlarge.
+   ========================================================= */
+(function () {
+  const lb      = document.getElementById('lightbox');
+  const lbImg   = document.getElementById('lightbox-img');
+  const lbClose = document.getElementById('lightbox-close');
+  if (!lb || !lbImg || !lbClose) return;
+
+  function open(src) {
+    lbImg.src = src;
+    lb.classList.add('open');
+    lb.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+  }
+  function close() {
+    lb.classList.remove('open');
+    lb.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+    setTimeout(() => { if (!lb.classList.contains('open')) lbImg.src = ''; }, 300);
+  }
+  document.addEventListener('click', (e) => {
+    const img = e.target.closest('.hero-image img, .card-image img, img.article-media');
+    if (!img) return;
+    e.preventDefault();
+    e.stopPropagation();
+    open(img.currentSrc || img.src);
+  });
+  lb.addEventListener('click', (e) => {
+    if (e.target === lb || e.target.closest('#lightbox-close')) close();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && lb.classList.contains('open')) close();
+  });
+})();
+
+/* =========================================================
+   WAVE CANVAS — smooth orange ripple sine wave (light theme).
+   Uses requestAnimationFrame + canvas for a real wave shape.
+   ========================================================= */
+(function () {
+  const field = document.getElementById('block-field');
+  if (!field) return;
+
+  const canvas = document.createElement('canvas');
+  field.appendChild(canvas);
+  const ctx = canvas.getContext('2d');
+  let t = 0, raf;
+
+  function resize() {
+    canvas.width  = field.offsetWidth  || window.innerWidth;
+    canvas.height = field.offsetHeight || 320;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  function draw() {
+    const W = canvas.width, H = canvas.height;
+    ctx.clearRect(0, 0, W, H);
+
+    const theme = document.documentElement.getAttribute('data-theme');
+    if (theme === 'light') {
+      // Three layered sine waves, each filled down to bottom
+      const layers = [
+        { amp: 28, freq: 0.016, speed: 1.0, yBase: H * 0.52, colors: ['rgba(255,160,60,0.85)', 'rgba(184,81,0,0.9)'] },
+        { amp: 18, freq: 0.024, speed: 1.4, yBase: H * 0.65, colors: ['rgba(255,200,100,0.6)', 'rgba(220,110,0,0.7)'] },
+        { amp: 12, freq: 0.010, speed: 0.7, yBase: H * 0.42, colors: ['rgba(255,136,38,0.4)', 'rgba(255,180,80,0.5)'] },
+      ];
+
+      layers.forEach(layer => {
+        ctx.beginPath();
+        for (let x = 0; x <= W; x += 3) {
+          const y = layer.yBase
+            + Math.sin(x * layer.freq + t * layer.speed) * layer.amp
+            + Math.sin(x * layer.freq * 1.6 - t * layer.speed * 0.8) * layer.amp * 0.35;
+          x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+        }
+        ctx.lineTo(W, H);
+        ctx.lineTo(0, H);
+        ctx.closePath();
+
+        const grad = ctx.createLinearGradient(0, layer.yBase - layer.amp, 0, H);
+        grad.addColorStop(0, layer.colors[0]);
+        grad.addColorStop(1, layer.colors[1]);
+        ctx.fillStyle = grad;
+        ctx.fill();
+      });
+
+      // Soft glow overlay at the bottom center
+      const glow = ctx.createRadialGradient(W/2, H, 0, W/2, H, W * 0.55);
+      glow.addColorStop(0, 'rgba(255,140,40,0.18)');
+      glow.addColorStop(1, 'transparent');
+      ctx.fillStyle = glow;
+      ctx.fillRect(0, 0, W, H);
+    }
+
+    t += 0.022;
+    raf = requestAnimationFrame(draw);
+  }
+
+  draw();
+})();
+>>>>>>> master
