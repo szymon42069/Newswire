@@ -4,6 +4,7 @@ from concurrent.futures import ThreadPoolExecutor
 import re
 import time
 import logging
+import json
 from email.utils import parsedate_to_datetime
 from flask import Flask, jsonify, render_template, request, Response
 
@@ -29,6 +30,9 @@ RSS_FEEDS = {
         "https://feeds.npr.org/1001/rss.xml",
         "https://www.france24.com/en/rss",
         "https://rss.dw.com/rdf/rss-en-all",
+        "https://www.euronews.com/rss?level=theme&name=news",
+        "https://feeds.feedburner.com/time/topstories",
+        "https://www.cbsnews.com/latest/rss/main",
         "https://feeds.washingtonpost.com/rss/world",
         "https://news.google.com/rss/topstories?hl=en-GB&gl=GB&ceid=GB:en",
         "https://news.google.com/rss/search?q=site:reuters.com&hl=en-GB&gl=GB&ceid=GB:en",
@@ -51,6 +55,8 @@ RSS_FEEDS = {
         "https://feeds.npr.org/1004/rss.xml",
         "https://www.france24.com/en/rss",
         "https://rss.dw.com/rdf/rss-en-world",
+        "https://www.euronews.com/rss?level=theme&name=news",
+        "https://www.cbsnews.com/latest/rss/world",
         "https://feeds.washingtonpost.com/rss/world",
         "https://news.google.com/rss/headlines/section/topic/WORLD?hl=en-GB&gl=GB&ceid=GB:en",
         "https://news.google.com/rss/search?q=site:reuters.com/world&hl=en-GB&gl=GB&ceid=GB:en",
@@ -61,6 +67,8 @@ RSS_FEEDS = {
         "https://www.theguardian.com/business/rss",
         "https://feeds.npr.org/1006/rss.xml",
         "https://www.france24.com/en/business-tech/rss",
+        "https://www.euronews.com/rss?level=theme&name=business",
+        "https://www.cbsnews.com/latest/rss/moneywatch",
         "https://news.google.com/rss/headlines/section/topic/BUSINESS?hl=en-GB&gl=GB&ceid=GB:en",
         "https://news.google.com/rss/search?q=site:reuters.com/business&hl=en-GB&gl=GB&ceid=GB:en",
         "https://news.google.com/rss/search?q=site:ft.com&hl=en-GB&gl=GB&ceid=GB:en",
@@ -71,6 +79,7 @@ RSS_FEEDS = {
         "https://www.theguardian.com/uk/technology/rss",
         "https://feeds.npr.org/1019/rss.xml",
         "https://www.france24.com/en/business-tech/rss",
+        "https://www.euronews.com/rss?level=theme&name=next",
         "https://news.google.com/rss/headlines/section/topic/TECHNOLOGY?hl=en-GB&gl=GB&ceid=GB:en",
         "https://news.google.com/rss/search?q=site:reuters.com/technology&hl=en-GB&gl=GB&ceid=GB:en",
     ],
@@ -79,6 +88,7 @@ RSS_FEEDS = {
         "https://www.theguardian.com/science/rss",
         "https://feeds.npr.org/1007/rss.xml",
         "https://www.france24.com/en/tag/science/rss",
+        "https://www.euronews.com/rss?level=theme&name=next",
         "https://news.google.com/rss/headlines/section/topic/SCIENCE?hl=en-GB&gl=GB&ceid=GB:en",
     ],
     "sport": [
@@ -135,7 +145,7 @@ def _scrape_media(url: str) -> dict:
         for chunk in resp.iter_content(chunk_size=8192):
             chunks.append(chunk)
             size += len(chunk)
-            if size >= 51200:
+            if size >= 204800:
                 break
         resp.close()
         html = b"".join(chunks).decode("utf-8", errors="replace")
@@ -173,6 +183,26 @@ def _scrape_media(url: str) -> dict:
                 if not result["type"]:
                     result["type"] = "image"
 
+        if not result["image"]:
+            for script in soup.find_all("script", type="application/ld+json"):
+                try:
+                    data = json.loads(script.string or "")
+                except Exception:
+                    continue
+                items = data if isinstance(data, list) else [data]
+                for item in items:
+                    image = item.get("image") if isinstance(item, dict) else None
+                    if isinstance(image, dict):
+                        image = image.get("url")
+                    elif isinstance(image, list) and image:
+                        image = image[0].get("url") if isinstance(image[0], dict) else image[0]
+                    if image:
+                        result["image"] = image
+                        result["type"] = "image"
+                        break
+                if result["image"]:
+                    break
+
         logger.info("Scraped %s → image=%s", url[:80], bool(result["image"]))
 
     except Exception as exc:
@@ -192,6 +222,9 @@ def _resolve_article(article: dict) -> dict:
     if hit and isinstance(hit, tuple):
         cached_at, data = hit
         if now - cached_at < ARTICLE_CACHE_TTL:
+            article["link"] = data.get("url") or article["link"]
+            if "news.google.com" in article["link"] or "consent.google.com" in article["link"]:
+                article["_drop"] = True
             article["image"] = data["image"]
             article["video"] = data["video"]
             article["media_type"] = data["type"]
@@ -221,6 +254,8 @@ def _parse_entry(entry) -> dict:
         source = entry.get("feed_source", "")
 
     link = entry.get("link", "#")
+    if link.startswith("http://www.euronews.com/"):
+        link = "https://" + link[len("http://"):]
 
     try:
         dt = parsedate_to_datetime(entry.get("published", ""))
@@ -278,7 +313,7 @@ def _entry_timestamp(entry) -> float:
 
 def _source_key(article: dict) -> str:
     text = f"{article.get('source', '')} {article.get('link', '')}".lower()
-    for name in ("bbc", "sky", "aljazeera", "guardian", "npr", "france24", "dw.com", "washingtonpost", "reuters", "ft.com", "c-span"):
+    for name in ("bbc", "sky", "aljazeera", "guardian", "npr", "france24", "euronews", "time", "cbsnews", "dw.com", "washingtonpost", "reuters", "ft.com", "c-span"):
         if name in text:
             return name
     return article.get("source", "other") or "other"
@@ -290,8 +325,11 @@ def _rank_article(article: dict) -> float:
         "aljazeera": 7200,
         "reuters": 5400,
         "guardian": 3600,
-        "france24": 3000,
+        "france24": 900,
         "npr": 2400,
+        "euronews": 2200,
+        "cbsnews": 1600,
+        "time": 1200,
         "dw.com": 1800,
         "washingtonpost": 1800,
         "bbc": -3600,
@@ -349,12 +387,15 @@ def fetch_feed(category: str) -> list:
     balanced = []
     for a in articles:
         source = _source_key(a)
-        limit = 4 if source == "bbc" else 6
+        if source in ("bbc", "france24"):
+            limit = 3
+        else:
+            limit = 5
         if counts.get(source, 0) >= limit:
             continue
         counts[source] = counts.get(source, 0) + 1
         balanced.append(a)
-    articles = balanced[:30]
+    articles = balanced[:45]
 
     for a in articles:
         a.pop("_drop", None)
@@ -408,7 +449,7 @@ def api_media():
     if not isinstance(articles, list):
         return jsonify({"error": "articles must be a list"}), 400
     try:
-        return jsonify({"articles": resolve_media_batch(articles[:30])})
+        return jsonify({"articles": resolve_media_batch(articles[:45])})
     except Exception as exc:
         logger.error("Error resolving media: %s", exc)
         return jsonify({"error": str(exc)}), 500

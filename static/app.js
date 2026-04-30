@@ -42,6 +42,8 @@
     mediaLoading: false,
     mediaProgress: 0,
     mediaToken: 0,
+    skipImages: false,
+    visibleCount: 18,
   };
 
 
@@ -176,7 +178,7 @@
         onerror="imgError(this)"
       />`;
   }
-  return `<div class="article-media placeholder"></div>`;
+  return `<div class="article-media placeholder media-loading">${placeholderSvg()}</div>`;
 }
   function renderCard(article, index) {
     const id = articleId(article);
@@ -225,7 +227,11 @@
     }
 
     const [hero, ...rest] = filtered;
-    const gridItems = rest.map((a, i) => renderCard(a, i)).join("");
+    const visibleRest = rest.slice(0, Math.max(0, state.visibleCount - 1));
+    const gridItems = visibleRest.map((a, i) => renderCard(a, i)).join("");
+    const more = filtered.length > state.visibleCount
+      ? `<button class="see-more" id="see-more" type="button">See more</button>`
+      : "";
 
     return `
       <div class="content-panel entering">
@@ -237,6 +243,7 @@
         <div class="article-grid">
           ${gridItems || '<p class="no-results">Only one article today.</p>'}
         </div>
+        ${more}
       </div>`;
   }
 
@@ -244,6 +251,7 @@
     return `<div class="loading-state">
       <div class="loading-spinner"></div>
       <p class="loading-text">Fetching latest stories…</p>
+      <button class="media-skip loading-skip" id="media-skip" type="button">Skip images</button>
     </div>`;
   }
 
@@ -320,6 +328,11 @@
     }
 
     els.contentArea.innerHTML = renderLoading();
+    document.getElementById("media-skip")?.addEventListener("click", () => {
+      state.skipImages = true;
+      const btn = document.getElementById("media-skip");
+      if (btn) btn.textContent = "Images will load later";
+    });
 
     if (force && articleCache[category]) {
       delete articleCache[category];
@@ -329,6 +342,7 @@
       const articles = await fetchArticles(category);
       state.articles = articles;
       state.lastFetched = Date.now();
+      state.visibleCount = 18;
       els.contentArea.innerHTML = renderContent(articles);
       revealCards();
       upgradeImages();
@@ -424,6 +438,14 @@
     });
 
     els.contentArea.addEventListener("click", (e) => {
+      const more = e.target.closest("#see-more");
+      if (more) {
+        state.visibleCount += 9;
+        els.contentArea.innerHTML = renderContent(state.articles);
+        revealCards();
+        upgradeImages();
+        return;
+      }
       const link = e.target.closest("[data-read-id]");
       if (!link) return;
       markRead(link.dataset.readId);
@@ -435,12 +457,6 @@
     const token = ++state.mediaToken;
     state.mediaLoading = true;
     state.mediaProgress = 15;
-    els.contentArea.insertAdjacentHTML("afterbegin", renderMediaProgress());
-    document.getElementById("media-skip")?.addEventListener("click", () => {
-      state.mediaToken++;
-      state.mediaLoading = false;
-      els.contentArea.querySelector(".media-progress")?.remove();
-    });
     try {
       const response = await fetch("/api/media", {
         method: "POST",
@@ -462,8 +478,6 @@
       console.warn("Media load failed:", err);
     } finally {
       state.mediaLoading = false;
-      const bar = els.contentArea.querySelector(".media-progress");
-      if (bar) bar.remove();
     }
   }
 
