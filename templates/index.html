@@ -57,6 +57,17 @@
         </span>
 
         
+        <button class="btn-sources" id="btn-sources" aria-label="View news sources">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+            <line x1="9" y1="7" x2="15" y2="7"/>
+            <line x1="9" y1="11" x2="15" y2="11"/>
+            <line x1="9" y1="15" x2="13" y2="15"/>
+          </svg>
+          Sources
+        </button>
+
         <button class="btn-refresh" id="btn-refresh" aria-label="Refresh articles">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
             <polyline points="1 4 1 10 7 10"/>
@@ -84,6 +95,13 @@
           </svg>
           <svg data-theme-icon="blue" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
             <path d="M17 18a4 4 0 0 0 0-8 6 6 0 0 0-11.5-1.5A4.5 4.5 0 0 0 6.5 18z"/>
+          </svg>
+          <svg data-theme-icon="newspaper" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+            <rect x="3" y="3" width="18" height="18" rx="1"/>
+            <line x1="3" y1="8" x2="21" y2="8"/>
+            <line x1="8" y1="8" x2="8" y2="21"/>
+            <line x1="11" y1="12" x2="19" y2="12"/>
+            <line x1="11" y1="16" x2="17" y2="16"/>
           </svg>
         </button>
       </div>
@@ -156,6 +174,51 @@
       <a href="https://github.com/szymon42069/Newswire" target="_blank" rel="noopener">View on GitHub</a>
     </span>
   </footer>
+
+  <!-- Sources Modal -->
+  <div class="sources-overlay" id="sources-overlay" role="dialog" aria-modal="true" aria-label="News sources" aria-hidden="true">
+    <div class="sources-panel">
+      <div class="sources-header">
+        <h2 class="sources-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+          </svg>
+          News Sources
+        </h2>
+        <button class="sources-close" id="sources-close" aria-label="Close sources">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 6L6 18M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+      <p class="sources-desc">Newswire aggregates headlines from the following RSS feeds across all categories.</p>
+      <ul class="sources-list" id="sources-list">
+        <li><span class="source-name">BBC News</span>        <span class="source-url">feeds.bbci.co.uk</span></li>
+        <li><span class="source-name">Sky News</span>        <span class="source-url">feeds.skynews.com</span></li>
+        <li><span class="source-name">The Guardian</span>    <span class="source-url">theguardian.com</span></li>
+        <li><span class="source-name">Al Jazeera</span>      <span class="source-url">aljazeera.com</span></li>
+        <li><span class="source-name">Reuters</span>         <span class="source-url">reuters.com via Google News</span></li>
+        <li><span class="source-name">NPR</span>             <span class="source-url">feeds.npr.org</span></li>
+        <li><span class="source-name">France 24</span>       <span class="source-url">france24.com</span></li>
+        <li><span class="source-name">Deutsche Welle</span>  <span class="source-url">rss.dw.com</span></li>
+        <li><span class="source-name">Euronews</span>        <span class="source-url">euronews.com</span></li>
+        <li><span class="source-name">TIME</span>            <span class="source-url">time.com via Feedburner</span></li>
+        <li><span class="source-name">CBS News</span>        <span class="source-url">cbsnews.com</span></li>
+        <li><span class="source-name">Washington Post</span> <span class="source-url">washingtonpost.com</span></li>
+        <li><span class="source-name">Financial Times</span> <span class="source-url">ft.com via Google News</span></li>
+        <li><span class="source-name">Google News</span>     <span class="source-url">news.google.com</span></li>
+      </ul>
+
+      <form class="add-source-form" id="add-source-form" autocomplete="off" novalidate>
+        <p class="add-source-label">Add your own source</p>
+        <input type="text" id="add-source-name" placeholder="Source name" maxlength="40" />
+        <input type="url"  id="add-source-url"  placeholder="https://example.com/rss.xml" />
+        <button type="submit" class="add-source-btn">Add</button>
+        <p class="add-source-msg" id="add-source-msg" aria-live="polite"></p>
+      </form>
+    </div>
+  </div>
 
   <script src="/static/app.js"></script>
 </body>

@@ -350,15 +350,18 @@ def _fetch_entries_from_url(url: str, per_feed_limit: int) -> list:
     return entries
 
 
-def fetch_feed(category: str) -> list:
+def fetch_feed(category: str, custom_urls=None) -> list:
+    custom_urls = list(custom_urls or [])
+    cache_key = category if not custom_urls else f"{category}::{'|'.join(sorted(custom_urls))}"
     now = time.time()
-    if category in _cache:
-        cached_at, articles = _cache[category]
+    if cache_key in _cache:
+        cached_at, articles = _cache[cache_key]
         if now - cached_at < CACHE_TTL:
-            logger.info("Serving '%s' from cache", category)
+            logger.info("Serving '%s' from cache", cache_key)
             return articles
 
-    urls = RSS_FEEDS.get(category, RSS_FEEDS["top"])
+    urls = list(RSS_FEEDS.get(category, RSS_FEEDS["top"]))
+    urls.extend(custom_urls)
     if isinstance(urls, str):
         urls = [urls]
 
@@ -398,7 +401,7 @@ def fetch_feed(category: str) -> list:
     for a in articles:
         a.pop("_drop", None)
 
-    _cache[category] = (now, articles)
+    _cache[cache_key] = (now, articles)
     return articles
 
 
@@ -427,13 +430,22 @@ def api_news():
     category = request.args.get("category", "top").lower()
     if category not in RSS_FEEDS:
         return jsonify({"error": f"Unknown category '{category}'"}), 400
+    custom_param = request.args.get("custom", "").strip()
+    custom_urls = []
+    if custom_param:
+        for u in custom_param.split("|"):
+            u = u.strip()
+            if u.startswith(("http://", "https://")):
+                custom_urls.append(u)
+        custom_urls = custom_urls[:20]
+    cache_key = category if not custom_urls else f"{category}::{'|'.join(sorted(custom_urls))}"
     try:
-        articles = fetch_feed(category)
+        articles = fetch_feed(category, custom_urls)
         return jsonify({
             "category": category,
             "count": len(articles),
             "articles": articles,
-            "cached_until": _cache.get(category, (0,))[0] + CACHE_TTL,
+            "cached_until": _cache.get(cache_key, (0,))[0] + CACHE_TTL,
         })
     except Exception as exc:
         logger.error("Error fetching '%s': %s", category, exc)
@@ -477,10 +489,35 @@ def image_proxy():
         if now - cached_at < ARTICLE_CACHE_TTL:
             return Response(data, content_type=content_type)
 
+    # Domain-specific referer overrides — many CDNs reject hotlinks unless
+    # the Referer matches the main editorial site, not the image subdomain.
+    _REFERER_MAP = {
+        "images.cbsnews.com":      "https://www.cbsnews.com/",
+        "cbsnews.com":             "https://www.cbsnews.com/",
+        "cbsistatic.com":          "https://www.cbsnews.com/",
+        "la.cbsnews.com":          "https://www.cbsnews.com/",
+        "static.cbsnews.com":      "https://www.cbsnews.com/",
+        "media.cnn.com":           "https://www.cnn.com/",
+        "cdn.cnn.com":             "https://www.cnn.com/",
+        "s.abcnews.com":           "https://abcnews.go.com/",
+        "i.abcnewsfe.com":         "https://abcnews.go.com/",
+        "static01.nyt.com":        "https://www.nytimes.com/",
+        "static.politico.com":     "https://www.politico.com/",
+        "dims.apnews.com":         "https://apnews.com/",
+        "storage.googleapis.com":  None,   # no referer needed
+    }
     try:
         parsed = requests.utils.urlparse(url)
-        referer = f"{parsed.scheme}://{parsed.netloc}/"
-        r = _SESSION.get(url, timeout=6, stream=True, headers={"Referer": referer})
+        host = parsed.netloc.lower()
+        if host in _REFERER_MAP:
+            referer = _REFERER_MAP[host]
+        else:
+            # default: use the image host itself as referer
+            referer = f"{parsed.scheme}://{host}/"
+        extra = {"Accept": "image/avif,image/webp,image/apng,image/*,*/*;q=0.8"}
+        if referer:
+            extra["Referer"] = referer
+        r = _SESSION.get(url, timeout=6, stream=True, headers=extra)
         if r.status_code != 200:
             return "", r.status_code
         content_type = r.headers.get("Content-Type", "image/jpeg")
