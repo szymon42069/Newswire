@@ -32,10 +32,10 @@
 ![Light Theme](Assets/3.png)
 
 **Blue Theme**
-![Blue Theme](Assets/1.png)
+![Blue Theme](Assets/4.png)
 
 **Newspaper Theme**
-![Newspaper Theme](Assets/4.png)
+![Newspaper Theme](Assets/1.png)
 
 </details>
 
