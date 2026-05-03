@@ -113,19 +113,19 @@ Example response:
 ## 📊 Project's Roadmap/Potential Improvements
 
 - Add support for the Financial Times RSS feeds, they have topic-specific ones for subscribers, so you will have to provide your login details or token. Don't you worry though because this will be stored locally.❌
-- Persist a read/unread state in localStorage❌
-- Add a dark/light theme toggle❌
+- Persist a read/unread state in localStorage✅ (30/04/2026)
+- Add a dark/light/blue/newspaper theme toggle✅ (29/04/2026)
 - Package it as a small systemd service so it starts automatically for Linux users (like me hehe)❌
-- Im also planning to add a source button too, that you can select sources you like to hear from and don't.❌
+- Im also planning to add a source button too, that you can select sources you like to hear from and don't.✅ (01/05/2026
 - Maybe even possibly turning it into a apk or ipa for phones that will be available to download from the App Store/Google/Play Store.❌
 - Image support ✅
   
 - Also, im planning to add these websites too and add a specific filter onto them, so that you can select what source you want such as...
-  Al Jazeera English (AJE)
-  The Financial Times (For Economics)
-  Reuters
-  The Guardian
-  C-SPAN (Politics)
+  Al Jazeera English (AJE)✅
+  The Financial Times (For Economics)❌
+  Reuters✅
+  The Guardian✅
+  C-SPAN (Politics)✅
 
 ## Star History
 
