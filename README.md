@@ -26,16 +26,16 @@
 <br>
 
 **Dark Theme**
-![Dark Theme](Assets/1.png)
+![Dark Theme](Assets/4.png)
 
 **Light Theme**
-![Light Theme](Assets/2.png)
+![Light Theme](Assets/1.png)
 
 **Blue Theme**
 ![Blue Theme](Assets/3.png)
 
 **Newspaper Theme**
-![Newspaper Theme](Assets/4.png)
+![Newspaper Theme](Assets/2.png)
 
 </details>
 
