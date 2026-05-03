@@ -18,10 +18,6 @@
 
 ![Theme Preview](Assets/animation_gif.gif)
 
-<p align="center">
-  <img src="assets/preview.gif" width="100%" />
-</p>
-
 <table>
   <tr>
     <td><img src="Assets/1.png" width="400"/></td>
