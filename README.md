@@ -1,3 +1,38 @@
+<p align="center">
+  <img src="https://capsule-render.vercel.app/api?type=waving&height=300&color=gradient&text=The%20Newswire&reversal=false&animation=twinkling&textBg=false&section=header" />
+</p>
+
+<p align="center">
+  <a href="https://newswire-website-demo.onrender.com"><strong>🌐 Live Demo</strong></a> •
+  <a href="#running-it-locally"><strong>🚀 Quick Start</strong></a> •
+  <a href="#-running-it-from-a-phone-android--termux"><strong>📱 Run on Phone</strong></a>
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Python-3.x-blue?logo=python&logoColor=white" />
+  <img src="https://img.shields.io/badge/Flask-black?logo=flask&logoColor=white" />
+  <img src="https://img.shields.io/badge/Vanilla%20JS-yellow?logo=javascript&logoColor=black" />
+  <img src="https://img.shields.io/badge/Self--Hosted-Termux-green?logo=android&logoColor=white" />
+  <img src="https://img.shields.io/badge/License-MIT-lightgrey" />
+</p>
+
+<p align="center">
+  <img src="assets/preview.gif" width="100%" />
+</p>
+
+<table>
+  <tr>
+    <td><img src="assets/screenshot1.png" width="400"/></td>
+    <td><img src="assets/screenshot2.png" width="400"/></td>
+  </tr>
+  <tr>
+    <td><img src="assets/screenshot3.png" width="400"/></td>
+    <td><img src="assets/screenshot4.png" width="400"/></td>
+  </tr>
+</table>
+
+
+
 ![header](https://capsule-render.vercel.app/api?type=waving&height=300&color=gradient&text=The%20%Newswire&reversal=false&animation=twinkling&textBg=false&section=header)
 ![Newswire Preview](assets/preview.gif)
 
