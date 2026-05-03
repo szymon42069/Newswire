@@ -1,6 +1,19 @@
 ![header](https://capsule-render.vercel.app/api?type=waving&height=300&color=gradient&text=The%20%Newswire&reversal=false&animation=twinkling&textBg=false&section=header)
+![Newswire Preview](assets/preview.gif)
 
-![Newswire Dashboard](Assets/screenshot.png)
+<br>
+
+<table>
+  <tr>
+    <td><img src="Assets/1.png" width="400"/></td>
+    <td><img src="Assets/2.png" width="400"/></td>
+  </tr>
+  <tr>
+    <td><img src="Assets/3.png" width="400"/></td>
+    <td><img src="Assets/4.png" width="400"/></td>
+  </tr>
+</table>
+
 ![Theme Preview](Assets/animation_gif.gif)
 
 
