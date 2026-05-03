@@ -22,12 +22,12 @@
 
 <table>
   <tr>
-    <td><img src="assets/screenshot1.png" width="400"/></td>
-    <td><img src="assets/screenshot2.png" width="400"/></td>
+    <td><img src="Assets/1.png" width="400"/></td>
+    <td><img src="Assets/2.png" width="400"/></td>
   </tr>
   <tr>
-    <td><img src="assets/screenshot3.png" width="400"/></td>
-    <td><img src="assets/screenshot4.png" width="400"/></td>
+    <td><img src="Assets/3.png" width="400"/></td>
+    <td><img src="Assets/4.png" width="400"/></td>
   </tr>
 </table>
 
