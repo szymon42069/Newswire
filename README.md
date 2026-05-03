@@ -18,20 +18,26 @@
 
 ![Theme Preview](Assets/animation_gif.gif)
 
-<table>
-  <tr>
-    <td><img src="Assets/1.png" width="400"/></td>
-    <td><img src="Assets/2.png" width="400"/></td>
-  </tr>
-  <tr>
-    <td><img src="Assets/3.png" width="400"/></td>
-    <td><img src="Assets/4.png" width="400"/></td>
-  </tr>
-</table>
+## 🖼 Screenshots
 
+<details>
+<summary>Click to view screenshots individually</summary>
 
+<br>
 
+**Dark Theme**
+![Dark Theme](Assets/1.png)
 
+**Light Theme**
+![Light Theme](Assets/2.png)
+
+**Blue Theme**
+![Blue Theme](Assets/3.png)
+
+**Newspaper Theme**
+![Newspaper Theme](Assets/4.png)
+
+</details>
 
 # 📰 Newswire 🗞
 **[Live Demo](https://newswire-website-demo.onrender.com)** | Live news dashboard built with Python + Flask
