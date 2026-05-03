@@ -2,7 +2,7 @@
 **[Live Demo](https://newswire-website-demo.onrender.com)** | Live news dashboard built with Python + Flask
 
 
-![header](https://capsule-render.vercel.app/api?type=waving&height=300&color=gradient&text=The%20%Newswire&reversal=false&animation=twinkling&textBg=false&section=header
+[header](https://capsule-render.vercel.app/api?type=waving&height=300&color=gradient&text=The%20%Newswire&reversal=false&animation=twinkling&textBg=false&section=header
 
 A live news dashboard I put together over a few evenings and weeks throughout my breaks. It pulls headlines from Google News RSS feeds across several categories, serves them through a small Flask API, and displays everything in a dark editorial UI with smooth transitions between sections.
 
