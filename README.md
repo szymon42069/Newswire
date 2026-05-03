@@ -1,4 +1,8 @@
-![header](https://capsule-render.vercel.app/api?type=waving&height=300&color=gradient&text=The%20%Newswire&reversal=false&animation=twinkling&textBg=false&section=header
+![header](https://capsule-render.vercel.app/api?type=waving&height=300&color=gradient&text=The%20%Newswire&reversal=false&animation=twinkling&textBg=false&section=header)
+
+![Newswire Dashboard](assets/screenshot.png)
+![Theme Preview](assets/preview.gif)
+
 
 # 📰 Newswire 🗞
 **[Live Demo](https://newswire-website-demo.onrender.com)** | Live news dashboard built with Python + Flask
