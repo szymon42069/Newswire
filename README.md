@@ -16,6 +16,8 @@
   <img src="https://img.shields.io/badge/License-MIT-lightgrey" />
 </p>
 
+![Theme Preview](Assets/animation_gif.gif)
+
 <p align="center">
   <img src="assets/preview.gif" width="100%" />
 </p>
@@ -32,7 +34,7 @@
 </table>
 
 
-![Theme Preview](Assets/animation_gif.gif)
+
 
 
 # 📰 Newswire 🗞
@@ -44,7 +46,7 @@ I built this mostly to have a cleaner alternative to opening a dozen news tabs i
 
 ---
 
-## ✨ What it does⁉ ✨
+## ✨ Features
 
 - Web scrapes headlines from Google News across seven categories: Top, Country of coice, World, Business, Technology, Science, and Sport (You get to pick which categories you would like, but can change them at any time)
 - Caches each feed for 5 minutes so it's not crashing the RSS endpoints on every page load
