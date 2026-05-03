@@ -38,6 +38,7 @@
   }
 
 
+  // TODO: this is getting a bit messy, might refactor into something cleaner later
   const state = {
     currentCategory: "top",
     articles: [],
@@ -276,7 +277,7 @@
     const mediaHtml = renderMedia(article);
 
     return `
-      <article class="card${isRead(article) ? " is-read" : ""}" style="animation-delay:${index * 55}ms">
+      <article class="card${isRead(article) ? " is-read" : ""}" style="animation-delay:${index * 55}ms" data-article-id="${escapeHtml(id)}">
         <div class="card-image">${mediaHtml}</div>
         <div class="card-body">
           ${article.source ? `<p class="card-source">${escapeHtml(article.source)}</p>` : ""}
@@ -339,6 +340,7 @@
   }
 
   function renderLoading() {
+    // skip button mainly exists for slow connections / phone runs
     return `<div class="loading-state">
       <div class="loading-spinner"></div>
       <p class="loading-text">Fetching latest stories…</p>
@@ -410,7 +412,6 @@
       const { articles, fetchedAt } = articleCache[category];
       const age = Date.now() - fetchedAt;
       if (age < 5 * 60 * 1000) {
-       
         return articles;
       }
     }
@@ -436,7 +437,6 @@
     state.isLoading = true;
     state.currentCategory = category;
 
-    
     const existing = els.contentArea.querySelector(".content-panel");
     if (existing) {
       existing.classList.remove("entering");
@@ -480,7 +480,6 @@
     });
   }
 
- 
   function updateClock() {
     const now = new Date();
     const opts = {
@@ -589,6 +588,8 @@
   }
 
   async function resolveMedia(category, articles) {
+    // fires after initial render so the page appears fast,
+    // then images get swapped in once the backend scrapes them
     const token = ++state.mediaToken;
     state.mediaLoading = true;
     state.mediaProgress = 15;
@@ -606,8 +607,33 @@
       state.articles = data.articles;
       articleCache[category] = { articles: data.articles, fetchedAt: Date.now() };
       state.mediaProgress = 100;
-      els.contentArea.innerHTML = renderContent(data.articles);
-      revealCards();
+
+      // patch only the image slot of each card rather than wiping the whole DOM —
+      // a full innerHTML swap would kill images that are already mid-load
+      let anyMissing = false;
+      data.articles.forEach((article) => {
+        const id = articleId(article);
+        const card = els.contentArea.querySelector(`[data-article-id="${CSS.escape(id)}"]`);
+        if (!card) { anyMissing = true; return; }
+        const slot = card.querySelector(".card-image");
+        if (!slot) return;
+        // only replace if the backend found a media upgrade AND the slot
+        // isn't already showing a fully-loaded image — replacing a loaded
+        // img wipes it from the screen even if the URL is identical
+        if (article.image || article.video) {
+          if (!slot.querySelector("img.is-full, video.article-media")) {
+            slot.innerHTML = renderMedia(article, false);
+          }
+        }
+      });
+
+      // if the card list changed (e.g. google news redirects dropped some),
+      // fall back to a full re-render
+      if (anyMissing) {
+        els.contentArea.innerHTML = renderContent(data.articles);
+        revealCards();
+      }
+
       upgradeImages();
     } catch (err) {
       console.warn("Media load failed:", err);

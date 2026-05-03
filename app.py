@@ -5,6 +5,7 @@ import re
 import time
 import logging
 import json
+import threading
 from email.utils import parsedate_to_datetime
 from flask import Flask, jsonify, render_template, request, Response
 
@@ -20,7 +21,6 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-
 RSS_FEEDS = {
     "top": [
         "https://feeds.bbci.co.uk/news/rss.xml",
@@ -33,19 +33,14 @@ RSS_FEEDS = {
         "https://www.euronews.com/rss?level=theme&name=news",
         "https://feeds.feedburner.com/time/topstories",
         "https://www.cbsnews.com/latest/rss/main",
-        "https://feeds.washingtonpost.com/rss/world",
-        "https://news.google.com/rss/topstories?hl=en-GB&gl=GB&ceid=GB:en",
-        "https://news.google.com/rss/search?q=site:reuters.com&hl=en-GB&gl=GB&ceid=GB:en",
-        "https://news.google.com/rss/search?q=site:ft.com&hl=en-GB&gl=GB&ceid=GB:en",
-        "https://news.google.com/rss/search?q=site:c-span.org&hl=en-GB&gl=GB&ceid=GB:en",
+        "https://feeds.cbsnews.com/cbsnews/story",
     ],
     "uk": [
         "https://feeds.bbci.co.uk/news/uk/rss.xml",
         "https://feeds.skynews.com/feeds/rss/uk.xml",
         "https://www.theguardian.com/uk-news/rss",
         "https://feeds.npr.org/1001/rss.xml",
-        "https://news.google.com/rss/headlines/section/topic/NATION?hl=en-GB&gl=GB&ceid=GB:en",
-        "https://news.google.com/rss/search?q=site:reuters.com+UK&hl=en-GB&gl=GB&ceid=GB:en",
+        "https://rss.dw.com/rdf/rss-en-all",
     ],
     "world": [
         "https://feeds.bbci.co.uk/news/world/rss.xml",
@@ -57,9 +52,6 @@ RSS_FEEDS = {
         "https://rss.dw.com/rdf/rss-en-world",
         "https://www.euronews.com/rss?level=theme&name=news",
         "https://www.cbsnews.com/latest/rss/world",
-        "https://feeds.washingtonpost.com/rss/world",
-        "https://news.google.com/rss/headlines/section/topic/WORLD?hl=en-GB&gl=GB&ceid=GB:en",
-        "https://news.google.com/rss/search?q=site:reuters.com/world&hl=en-GB&gl=GB&ceid=GB:en",
     ],
     "business": [
         "https://feeds.bbci.co.uk/news/business/rss.xml",
@@ -69,9 +61,6 @@ RSS_FEEDS = {
         "https://www.france24.com/en/business-tech/rss",
         "https://www.euronews.com/rss?level=theme&name=business",
         "https://www.cbsnews.com/latest/rss/moneywatch",
-        "https://news.google.com/rss/headlines/section/topic/BUSINESS?hl=en-GB&gl=GB&ceid=GB:en",
-        "https://news.google.com/rss/search?q=site:reuters.com/business&hl=en-GB&gl=GB&ceid=GB:en",
-        "https://news.google.com/rss/search?q=site:ft.com&hl=en-GB&gl=GB&ceid=GB:en",
     ],
     "technology": [
         "https://feeds.bbci.co.uk/news/technology/rss.xml",
@@ -80,8 +69,6 @@ RSS_FEEDS = {
         "https://feeds.npr.org/1019/rss.xml",
         "https://www.france24.com/en/business-tech/rss",
         "https://www.euronews.com/rss?level=theme&name=next",
-        "https://news.google.com/rss/headlines/section/topic/TECHNOLOGY?hl=en-GB&gl=GB&ceid=GB:en",
-        "https://news.google.com/rss/search?q=site:reuters.com/technology&hl=en-GB&gl=GB&ceid=GB:en",
     ],
     "science": [
         "https://feeds.bbci.co.uk/news/science_and_environment/rss.xml",
@@ -89,27 +76,27 @@ RSS_FEEDS = {
         "https://feeds.npr.org/1007/rss.xml",
         "https://www.france24.com/en/tag/science/rss",
         "https://www.euronews.com/rss?level=theme&name=next",
-        "https://news.google.com/rss/headlines/section/topic/SCIENCE?hl=en-GB&gl=GB&ceid=GB:en",
+        "https://rss.dw.com/rdf/rss-en-all",
     ],
     "sport": [
         "https://feeds.bbci.co.uk/sport/rss.xml",
         "https://feeds.skynews.com/feeds/rss/sport.xml",
         "https://www.theguardian.com/uk/sport/rss",
         "https://feeds.npr.org/1055/rss.xml",
-        "https://news.google.com/rss/headlines/section/topic/SPORTS?hl=en-GB&gl=GB&ceid=GB:en",
+        "https://www.euronews.com/rss?level=theme&name=sport",
     ],
 }
 
 
-
-_cache: dict = {}
+_cache = {}
 CACHE_TTL = 300
 
-_article_cache: dict = {}
+_article_cache = {}
 ARTICLE_CACHE_TTL = 3600
 
 
-def _strip_html(raw: str) -> str:
+# strips html tags and unescapes entities - used for summaries
+def strip_html(raw):
     import html
     text = re.sub(r"<[^>]+>", "", raw).strip()
     return html.unescape(text)
@@ -117,17 +104,29 @@ def _strip_html(raw: str) -> str:
 
 _SESSION = requests.Session()
 _SESSION.headers.update({
-    "User-Agent": (
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) "
-        "Chrome/124.0.0.0 Safari/537.36"
-    ),
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
     "Accept-Language": "en-GB,en;q=0.9",
 })
 
 
-def _scrape_media(url: str) -> dict:
+def upgrade_cbs_image(url):
+    """CBS CDN thumbnails have dimensions in the path like /thumbnail/60x34/ or /60x34/.
+    Replace with /original/ to get the full-resolution image."""
+    if not url:
+        return url
+    if "cbsnewsstatic.com" not in url and "cbsistatic.com" not in url and "cbsnews.com" not in url:
+        return url
+    # e.g. .../thumbnail/60x34/file.jpg  →  .../original/file.jpg
+    upgraded = re.sub(r'/thumbnail/\d+x\d+/', '/original/', url)
+    if upgraded != url:
+        return upgraded
+    # e.g. .../r/2024/01/01/guid/60x34/file.jpg  →  .../r/2024/01/01/guid/original/file.jpg
+    upgraded = re.sub(r'/(\d{2,4}x\d{2,4})/', '/original/', url)
+    return upgraded
+
+
+def scrape_media(url):
     result = {"image": None, "video": None, "type": None, "url": url}
     try:
         resp = _SESSION.get(
@@ -140,26 +139,24 @@ def _scrape_media(url: str) -> dict:
             return result
         result["url"] = resp.url
 
+        # stop streaming as soon as we've seen og:image — it's always
+        # in the <head>, so downloading 200KB is just wasted bandwidth
+        OG_MARKERS = [b"og:image", b"twitter:image", b"og:video"]
         chunks, size = [], 0
         for chunk in resp.iter_content(chunk_size=8192):
             chunks.append(chunk)
             size += len(chunk)
+            buf_so_far = b"".join(chunks)
+            if any(m in buf_so_far for m in OG_MARKERS):
+                break
             if size >= 204800:
                 break
         resp.close()
         html = b"".join(chunks).decode("utf-8", errors="replace")
         soup = BeautifulSoup(html, "html.parser")
 
-        for attrs in [
-            {"property": "og:video"},
-            {"property": "og:video:url"},
-            {"property": "og:video:secure_url"},
-        ]:
-            tag = soup.find("meta", attrs)
-            if tag and tag.get("content"):
-                result["video"] = tag["content"]
-                result["type"] = "video"
-                break
+        # NOTE: og:video is intentionally skipped — CBS and others use HLS
+        # (.m3u8) streams which browsers can't play natively. Images only.
 
         for attrs in [
             {"property": "og:image"},
@@ -182,6 +179,7 @@ def _scrape_media(url: str) -> dict:
                 if not result["type"]:
                     result["type"] = "image"
 
+        # fallback: try ld+json structured data
         if not result["image"]:
             for script in soup.find_all("script", type="application/ld+json"):
                 try:
@@ -210,7 +208,7 @@ def _scrape_media(url: str) -> dict:
     return result
 
 
-def _resolve_article(article: dict) -> dict:
+def resolve_article(article):
     if not article.get("_needs_resolve", False):
         return article
 
@@ -223,27 +221,40 @@ def _resolve_article(article: dict) -> dict:
             article["link"] = data.get("url") or article["link"]
             if "news.google.com" in article["link"] or "consent.google.com" in article["link"]:
                 article["_drop"] = True
-            article["image"] = data["image"]
-            article["video"] = data["video"]
-            article["media_type"] = data["type"]
+            # only replace if the scrape actually found something — don't
+            # clobber a working RSS image just because the page scrape failed
+            if data["image"] is not None:
+                article["image"] = data["image"]
+            elif article.get("_rss_thumb"):
+                article["image"] = article["_rss_thumb"]
+            if data["video"] is not None:
+                article["video"] = data["video"]
+            if data["type"] is not None:
+                article["media_type"] = data["type"]
             return article
 
-    media = _scrape_media(url)
+    media = scrape_media(url)
     _article_cache[url] = (now, media)
     article["link"] = media.get("url") or article["link"]
     if "news.google.com" in article["link"] or "consent.google.com" in article["link"]:
         article["_drop"] = True
-    article["image"] = media["image"]
-    article["video"] = media["video"]
-    article["media_type"] = media["type"]
+    if media["image"] is not None:
+        article["image"] = media["image"]
+    elif article.get("_rss_thumb"):
+        # scrape found nothing — use the RSS thumbnail as a last resort
+        article["image"] = article["_rss_thumb"]
+    if media["video"] is not None:
+        article["video"] = media["video"]
+    if media["type"] is not None:
+        article["media_type"] = media["type"]
     return article
 
 
-
-def _parse_entry(entry) -> dict:
+def parse_entry(entry):
     raw_title = entry.get("title", "Untitled")
     source = ""
     title = raw_title
+    # google news sticks the source at the end after " - "
     if " - " in raw_title:
         *parts, source = raw_title.rsplit(" - ", 1)
         title = " - ".join(parts).strip()
@@ -262,7 +273,7 @@ def _parse_entry(entry) -> dict:
         timestamp = time.time()
 
     raw_summary = entry.get("summary", "") or entry.get("description", "")
-    summary = _strip_html(raw_summary)
+    summary = strip_html(raw_summary)
     if len(summary) > 220:
         summary = summary[:217] + "…"
 
@@ -272,9 +283,8 @@ def _parse_entry(entry) -> dict:
         if isinstance(m, dict):
             mtype = m.get("type", "")
             url = m.get("url")
-            if mtype.startswith("video") and not video:
-                video, media_type = url, "video"
-            elif mtype.startswith("image") and not image:
+            # skip video/HLS — browsers can't play them natively
+            if mtype.startswith("image") and not image:
                 image, media_type = url, "image"
 
     if not image:
@@ -289,6 +299,22 @@ def _parse_entry(entry) -> dict:
             image = img_tag["src"]
             media_type = "image"
 
+    # stash CBS's RSS thumbnail as a last-resort fallback only —
+    # but first try to upgrade it to full resolution. if the upgrade
+    # succeeds, use it as the primary image so we skip page scraping
+    # entirely (CBS page scraping is unreliable and returns only one image).
+    rss_thumb = None
+    raw_rss_img = entry.get("_rss_image") if not image else None
+    if raw_rss_img:
+        upgraded = upgrade_cbs_image(raw_rss_img)
+        if upgraded != raw_rss_img:
+            # successfully upgraded → use as real image, no scraping needed
+            image = upgraded
+            media_type = "image"
+        else:
+            # could not upgrade → keep as low-res fallback only
+            rss_thumb = raw_rss_img
+
     return {
         "title": title,
         "source": source,
@@ -298,18 +324,19 @@ def _parse_entry(entry) -> dict:
         "image": image,
         "video": video,
         "media_type": media_type,
+        "_rss_thumb": rss_thumb,
         "_needs_resolve": image is None and video is None or "news.google.com" in link,
     }
 
 
-def _entry_timestamp(entry) -> float:
+def get_entry_timestamp(entry):
     try:
         return parsedate_to_datetime(entry.get("published", "")).timestamp()
     except Exception:
         return 0
 
 
-def _source_key(article: dict) -> str:
+def get_source_key(article):
     text = f"{article.get('source', '')} {article.get('link', '')}".lower()
     for name in ("bbc", "sky", "aljazeera", "guardian", "npr", "france24", "euronews", "time", "cbsnews", "dw.com", "washingtonpost", "reuters", "ft.com", "c-span"):
         if name in text:
@@ -317,40 +344,68 @@ def _source_key(article: dict) -> str:
     return article.get("source", "other") or "other"
 
 
-def _rank_article(article: dict) -> float:
-    source = _source_key(article)
-    boosts = {
-        "aljazeera": 7200,
-        "reuters": 5400,
-        "guardian": 3600,
-        "france24": 900,
-        "npr": 2400,
-        "euronews": 2200,
-        "cbsnews": 1600,
-        "time": 1200,
-        "dw.com": 1800,
-        "washingtonpost": 1800,
-        "bbc": -3600,
-    }
-    return article.get("timestamp", 0) + boosts.get(source, 0)
+# boost certain sources so they don't get buried by recency alone
+# bbc gets a penalty because it dominates otherwise
+SOURCE_BOOSTS = {
+    "aljazeera": 7200,
+    "reuters": 5400,
+    "guardian": 3600,
+    "france24": 900,
+    "npr": 2400,
+    "euronews": 2200,
+    "cbsnews": 1600,
+    "time": 1200,
+    "dw.com": 1800,
+    "washingtonpost": 1800,
+    "bbc": -3600,
+}
+
+def rank_article(article):
+    source = get_source_key(article)
+    return article.get("timestamp", 0) + SOURCE_BOOSTS.get(source, 0)
 
 
-def _fetch_entries_from_url(url: str, per_feed_limit: int) -> list:
+def fetch_single_feed(url, per_feed_limit):
     logger.info("Fetching feed: %s", url)
     try:
-        feed = feedparser.parse(url)
+        # fetch raw first so we can pull non-standard elements feedparser misses
+        resp = _SESSION.get(url, timeout=12)
+        resp.raise_for_status()
+        raw_xml = resp.text
+        feed = feedparser.parse(raw_xml)
     except Exception as exc:
         logger.info("Feed failed %s: %s", url, exc)
         return []
+
+    # CBS puts image URLs inside a non-standard <image> element per item that
+    # feedparser completely ignores. use regex on the raw XML — BeautifulSoup's
+    # html.parser treats <image> as a void element (like <img>) and returns
+    # None for .string, so it can't be used here.
+    guid_to_img = {}
+    try:
+        for item_xml in re.findall(r"<item>(.*?)</item>", raw_xml, re.DOTALL):
+            guid_m = re.search(r"<guid[^>]*>([^<]+)</guid>", item_xml)
+            img_m  = re.search(r"<image>([^<\s][^<]*)</image>", item_xml)
+            if guid_m and img_m:
+                img_url = img_m.group(1).strip()
+                if img_url.startswith("http"):
+                    img_url = upgrade_cbs_image(img_url)
+                    guid_to_img[guid_m.group(1).strip()] = img_url
+    except Exception:
+        pass
+
     feed_source = feed.feed.get("title", "")
     entries = []
     for e in feed.entries[:per_feed_limit]:
         e["feed_source"] = feed_source
+        guid = e.get("id", "")
+        if guid and guid in guid_to_img:
+            e["_rss_image"] = guid_to_img[guid]
         entries.append(e)
     return entries
 
 
-def fetch_feed(category: str, custom_urls=None) -> list:
+def fetch_feed(category, custom_urls=None):
     custom_urls = list(custom_urls or [])
     cache_key = category if not custom_urls else f"{category}::{'|'.join(sorted(custom_urls))}"
     now = time.time()
@@ -368,8 +423,9 @@ def fetch_feed(category: str, custom_urls=None) -> list:
     all_entries = []
     seen_titles = set()
     per_feed_limit = 8 if len(urls) > 3 else 12
+
     with ThreadPoolExecutor(max_workers=8) as pool:
-        feed_results = pool.map(lambda u: _fetch_entries_from_url(u, per_feed_limit), urls)
+        feed_results = pool.map(lambda u: fetch_single_feed(u, per_feed_limit), urls)
         for entries in feed_results:
             for e in entries:
                 title = e.get("title", "")
@@ -381,17 +437,17 @@ def fetch_feed(category: str, custom_urls=None) -> list:
     if not all_entries:
         raise RuntimeError(f"No entries found for '{category}'")
 
-    all_entries.sort(key=_entry_timestamp, reverse=True)
-    articles = [_parse_entry(e) for e in all_entries[:60]]
-    articles.sort(key=_rank_article, reverse=True)
+    all_entries.sort(key=get_entry_timestamp, reverse=True)
+    articles = [parse_entry(e) for e in all_entries[:60]]
+    articles.sort(key=rank_article, reverse=True)
+
+    # cap how many articles any single source can show - bbc and france24 get fewer
+    # because they tend to flood the feed otherwise
     counts = {}
     balanced = []
     for a in articles:
-        source = _source_key(a)
-        if source in ("bbc", "france24"):
-            limit = 3
-        else:
-            limit = 5
+        source = get_source_key(a)
+        limit = 3 if source in ("bbc", "france24") else 5
         if counts.get(source, 0) >= limit:
             continue
         counts[source] = counts.get(source, 0) + 1
@@ -405,19 +461,18 @@ def fetch_feed(category: str, custom_urls=None) -> list:
     return articles
 
 
-def resolve_media_batch(articles: list) -> list:
+def resolve_media_batch(articles):
     with ThreadPoolExecutor(max_workers=8) as pool:
-        resolved = list(pool.map(_resolve_article, articles))
+        resolved = list(pool.map(resolve_article, articles))
     clean = []
     for a in resolved:
         if a.get("_drop"):
             continue
         a.pop("_needs_resolve", None)
         a.pop("_drop", None)
+        a.pop("_rss_thumb", None)
         clean.append(a)
     return clean
-
-
 
 
 @app.route("/")
@@ -441,6 +496,11 @@ def api_news():
     cache_key = category if not custom_urls else f"{category}::{'|'.join(sorted(custom_urls))}"
     try:
         articles = fetch_feed(category, custom_urls)
+        # if any article still needs media resolution (cache miss or custom feed),
+        # resolve inline so the response already contains images
+        if any(a.get("_needs_resolve") for a in articles):
+            articles = resolve_media_batch(articles)
+            _cache[cache_key] = (time.time(), articles)
         return jsonify({
             "category": category,
             "count": len(articles),
@@ -474,6 +534,33 @@ def api_status():
     })
 
 
+# domain-specific referer overrides — a lot of CDNs reject hotlinks unless
+# the Referer matches the main editorial domain rather than the image subdomain.
+# built this up over time by just seeing what broke and adding fixes.
+# keys can be exact hosts OR base domains (e.g. "cbsnews.com" matches
+# "assets2.cbsnewsstatic.com" won't — so list the base cdn domain too)
+_REFERER_MAP = {
+    "cbsnews.com":             "https://www.cbsnews.com/",
+    "cbsnewsstatic.com":       "https://www.cbsnews.com/",
+    "cbsistatic.com":          "https://www.cbsnews.com/",
+    "cnn.com":                 "https://www.cnn.com/",
+    "abcnews.go.com":          "https://abcnews.go.com/",
+    "abcnewsfe.com":           "https://abcnews.go.com/",
+    "nytimes.com":             "https://www.nytimes.com/",
+    "politico.com":            "https://www.politico.com/",
+    "apnews.com":              "https://apnews.com/",
+    "storage.googleapis.com":  None,  # no referer needed for gcs
+}
+
+def get_referer(host, scheme):
+    """Check exact host first, then fall back to base-domain suffix matching."""
+    if host in _REFERER_MAP:
+        return _REFERER_MAP[host]
+    for base, ref in _REFERER_MAP.items():
+        if host.endswith("." + base):
+            return ref
+    return f"{scheme}://{host}/"
+
 @app.route("/api/proxy")
 def image_proxy():
     url = request.args.get("url", "").strip()
@@ -489,31 +576,10 @@ def image_proxy():
         if now - cached_at < ARTICLE_CACHE_TTL:
             return Response(data, content_type=content_type)
 
-    # Domain-specific referer overrides — many CDNs reject hotlinks unless
-    # the Referer matches the main editorial site, not the image subdomain.
-    _REFERER_MAP = {
-        "images.cbsnews.com":      "https://www.cbsnews.com/",
-        "cbsnews.com":             "https://www.cbsnews.com/",
-        "cbsistatic.com":          "https://www.cbsnews.com/",
-        "la.cbsnews.com":          "https://www.cbsnews.com/",
-        "static.cbsnews.com":      "https://www.cbsnews.com/",
-        "media.cnn.com":           "https://www.cnn.com/",
-        "cdn.cnn.com":             "https://www.cnn.com/",
-        "s.abcnews.com":           "https://abcnews.go.com/",
-        "i.abcnewsfe.com":         "https://abcnews.go.com/",
-        "static01.nyt.com":        "https://www.nytimes.com/",
-        "static.politico.com":     "https://www.politico.com/",
-        "dims.apnews.com":         "https://apnews.com/",
-        "storage.googleapis.com":  None,   # no referer needed
-    }
     try:
         parsed = requests.utils.urlparse(url)
         host = parsed.netloc.lower()
-        if host in _REFERER_MAP:
-            referer = _REFERER_MAP[host]
-        else:
-            # default: use the image host itself as referer
-            referer = f"{parsed.scheme}://{host}/"
+        referer = get_referer(host, parsed.scheme)
         extra = {"Accept": "image/avif,image/webp,image/apng,image/*,*/*;q=0.8"}
         if referer:
             extra["Referer"] = referer
@@ -537,6 +603,27 @@ def image_proxy():
     except Exception as exc:
         logger.debug("Image proxy failed for %s: %s", url, exc)
         return "", 502
+
+
+def _prewarm():
+    """Fetch and fully resolve media for all categories at startup so the
+    first page load has images ready immediately rather than trickling in."""
+    # small delay so the server is fully up before we hammer feeds
+    time.sleep(2)
+    for cat in RSS_FEEDS:
+        try:
+            logger.info("Pre-warming category '%s'…", cat)
+            articles = fetch_feed(cat)
+            resolved = resolve_media_batch(articles)
+            # write resolved articles (with images) back into the cache so
+            # /api/news serves them directly — no second /api/media round-trip needed
+            _cache[cat] = (time.time(), resolved)
+            logger.info("Pre-warm done for '%s': %d articles", cat, len(resolved))
+        except Exception as exc:
+            logger.warning("Pre-warm failed for '%s': %s", cat, exc)
+
+
+threading.Thread(target=_prewarm, daemon=True).start()
 
 
 if __name__ == "__main__":
