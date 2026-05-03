@@ -1,7 +1,7 @@
 ![header](https://capsule-render.vercel.app/api?type=waving&height=300&color=gradient&text=The%20%Newswire&reversal=false&animation=twinkling&textBg=false&section=header)
 
 ![Newswire Dashboard](Assets/screenshot.png)
-![Theme Preview](Assets/animation_gifgif)
+![Theme Preview](Assets/animation_gif.gif)
 
 
 # 📰 Newswire 🗞
